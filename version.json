@@ -1,17 +1,15 @@
 {
-    "version": "6.0",
-    "build": "2024122701",
-    "releaseDate": "2025-12-27",
-    "changelog": [
-        "🎉 Version 6.0 - Major Update!",
-        "✅ Added CPU Monitoring with Auto-Stop",
-        "✅ Added DigitalOcean Token Management",
-        "✅ Added User Management (/listuser, /cleanuser)",
-        "✅ Added Audio Support for /start menu",
-        "✅ Enhanced UI/UX with modern design",
-        "✅ Fixed media error handling",
-        "✅ Smart media type detection"
-    ],
-    "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/releases/latest.zip",
-    "minVersion": "3.0"
+        "version": "7.0",
+        "build": "2024122702",
+        "releaseDate": "2025-12-27",
+        "changelog": [
+                    "Version 7.0 - Massive RPG and Media Update",
+                    "RPG: Added 50+ Jobs and Careers system",
+                    "RPG: AFK System with 15+ activities",
+                    "RPG: Side Hustles and Minigames",
+                    "Media: Combo types (Text+Audio, Image+Audio)",
+                    "Fixed: Various bug fixes and stability"
+        ],
+        "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
+        "minVersion": "6.0"
 }
