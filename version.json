@@ -1,16 +1,16 @@
 {
-        "version": "7.1",
-        "build": "2024122703",
-        "releaseDate": "2025-12-27",
-        "changelog": [
-                    "Version 7.1 - MEGA RPG Expansion!",
-                    "NEW: Complete Fishing System with 100+ fish types",
-                    "NEW: Hunting System with 50+ animals",
-                    "NEW: Time Travel to different eras",
-                    "NEW: Relaxing Activities (ngopi, camping, surfing)",
-                    "NEW: Legendary, Mythical, Divine rarity catches",
-                    "Improved: Stability and performance fixes"
-        ],
-        "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
-        "minVersion": "7.0"
+            "version": "7.2",
+            "build": "2024122704",
+            "releaseDate": "2025-12-27",
+            "changelog": [
+                            "Version 7.2 - Auto-Update Fix + MEGA RPG!",
+                            "FIXED: Auto-update now correctly extracts files",
+                            "Fishing System with 100+ fish types",
+                            "Hunting System with 50+ animals",
+                            "Time Travel to different eras",
+                            "Relaxing Activities (ngopi, camping, surfing)",
+                            "Jobs and Careers System"
+            ],
+            "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
+            "minVersion": "7.0"
 }
