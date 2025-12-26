@@ -1,17 +1,15 @@
 {
-                "version": "7.3",
-                "build": "2024122705",
-                "releaseDate": "2025-12-27",
-                "changelog": [
-                                    "Version 7.3 - Nuclear Update System!",
-                                    "FIXED: Complete rewrite of auto-update system",
-                                    "NEW: Clean install mode (delete old, install fresh)",
-                                    "Fishing System with 100+ fish types",
-                                    "Hunting System with 50+ animals",
-                                    "Time Travel to different eras",
-                                    "Relaxing Activities (ngopi, camping)",
-                                    "Jobs and Careers System"
-                ],
-                "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
-                "minVersion": "7.0"
+      "version": "7.4",
+      "build": "2024122706",
+      "releaseDate": "2025-12-27",
+      "changelog": [
+                "Version 7.4 - Stability Update!",
+                "FIXED: Nuclear Update extraction system",
+                "FIXED: License validation improvements",
+                "Fishing System with 100+ fish types",
+                "Hunting System with 50+ animals",
+                "Time Travel to different eras"
+      ],
+      "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
+      "minVersion": "7.0"
 }
