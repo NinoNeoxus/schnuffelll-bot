@@ -1,19 +1,16 @@
 {
-    "version": "7.0",
-    "build": "2024122702",
-    "releaseDate": "2025-12-27",
-    "changelog": [
-        "🎉 Version 7.0 - Massive RPG & Media Update!",
-        "🎮 RPG: Added 50+ Jobs & Careers system",
-        "💤 RPG: AFK System with 15+ activities & reasons",
-        "🎰 RPG: Side Hustles & Minigames",
-        "📈 RPG: Job progression & ranking system",
-        "🎵 Media: Combo types (Text+Audio, Image+Audio, Video+Audio)",
-        "🖼️ Media: Separate audio URL setting",
-        "🔧 Fixed: Panel V3-V5 stability improvements",
-        "🐛 Fixed: Various bug fixes and optimizations",
-        "✨ Enhanced: UI/UX improvements"
-    ],
-    "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
-    "minVersion": "6.0"
+        "version": "7.1",
+        "build": "2024122703",
+        "releaseDate": "2025-12-27",
+        "changelog": [
+                    "Version 7.1 - MEGA RPG Expansion!",
+                    "NEW: Complete Fishing System with 100+ fish types",
+                    "NEW: Hunting System with 50+ animals",
+                    "NEW: Time Travel to different eras",
+                    "NEW: Relaxing Activities (ngopi, camping, surfing)",
+                    "NEW: Legendary, Mythical, Divine rarity catches",
+                    "Improved: Stability and performance fixes"
+        ],
+        "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
+        "minVersion": "7.0"
 }
