@@ -1,15 +1,14 @@
 {
-      "version": "7.4",
-      "build": "2024122706",
-      "releaseDate": "2025-12-27",
-      "changelog": [
-                "Version 7.4 - Stability Update!",
-                "FIXED: Nuclear Update extraction system",
-                "FIXED: License validation improvements",
-                "Fishing System with 100+ fish types",
-                "Hunting System with 50+ animals",
-                "Time Travel to different eras"
-      ],
-      "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
-      "minVersion": "7.0"
+          "version": "7.5",
+          "build": "2024122707",
+          "releaseDate": "2025-12-27",
+          "changelog": [
+                        "Version 7.5 - Linux Fix!",
+                        "FIXED: Update now works on Linux servers",
+                        "FIXED: Uses unzip/tar instead of PowerShell on Linux",
+                        "Fishing System with 100+ fish",
+                        "Hunting System with 50+ animals"
+          ],
+          "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
+          "minVersion": "7.0"
 }
