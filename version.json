@@ -3,15 +3,15 @@
     "build": "2024122701",
     "releaseDate": "2025-12-27",
     "changelog": [
-        "Version 6.0 - Major Update!",
-        "Added CPU Monitoring with Auto-Stop",
-        "Added DigitalOcean Token Management",
-        "Added User Management (/listuser, /cleanuser)",
-        "Added Audio Support for /start menu",
-        "Enhanced UI/UX with modern design",
-        "Fixed media error handling",
-        "Smart media type detection"
+        "🎉 Version 6.0 - Major Update!",
+        "✅ Added CPU Monitoring with Auto-Stop",
+        "✅ Added DigitalOcean Token Management",
+        "✅ Added User Management (/listuser, /cleanuser)",
+        "✅ Added Audio Support for /start menu",
+        "✅ Enhanced UI/UX with modern design",
+        "✅ Fixed media error handling",
+        "✅ Smart media type detection"
     ],
-    "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
+    "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/releases/latest.zip",
     "minVersion": "3.0"
 }
