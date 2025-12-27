@@ -1,14 +1,15 @@
 {
-          "version": "7.5",
-          "build": "2024122707",
-          "releaseDate": "2025-12-27",
-          "changelog": [
-                        "Version 7.5 - Linux Fix!",
-                        "FIXED: Update now works on Linux servers",
-                        "FIXED: Uses unzip/tar instead of PowerShell on Linux",
-                        "Fishing System with 100+ fish",
-                        "Hunting System with 50+ animals"
-          ],
-          "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
-          "minVersion": "7.0"
+              "version": "7.6",
+              "build": "2024122708",
+              "releaseDate": "2025-12-27",
+              "changelog": [
+                                "Version 7.6 - Media+Audio Combo Fix!",
+                                "FIXED: Menu combo sekarang 2 step (audio lalu media)",
+                                "FIXED: Linux extraction dengan unzip/tar",
+                                "FIXED: Token license baru",
+                                "Fishing System 100+ fish",
+                                "Hunting System 50+ animals"
+              ],
+              "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
+              "minVersion": "7.0"
 }
