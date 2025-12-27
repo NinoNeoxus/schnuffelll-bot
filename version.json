@@ -1,15 +1,22 @@
 {
-      "version": "7.6",
-      "build": "2024122709",
-      "releaseDate": "2025-12-27",
-      "changelog": [
-                "Version 7.6 - Multi-Fix Update!",
-                "FIXED: Rebuild VPS password 2x prompt",
-                "FIXED: Menu combo 2 step (audio lalu media)",
-                "FIXED: Linux extraction unzip/tar",
-                "FIXED: Token license baru",
-                "Fishing 100+ fish, Hunting 50+ animals"
-      ],
-      "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
-      "minVersion": "7.0"
+    "version": "8.0",
+    "build": "2024122710",
+    "releaseDate": "2025-12-27",
+    "changelog": [
+        "🎉 Version 8.0 - MEGA UPDATE!",
+        "🔐 Dev Menu - Secret settings",
+        "📦 Panel Management (10 commands)",
+        "🖥️ Server Management (10 commands)",
+        "☁️ VPS & DigitalOcean (12 commands)",
+        "👥 User Management (10 commands)",
+        "🤖 Automation (10 commands)",
+        "🛒 RPG Shop (18 items)",
+        "📜 RPG Quest (11 quests)",
+        "⚔️ RPG Guild Battles",
+        "🏆 Leaderboard & Rankings",
+        "🔧 Fixed inline buttons",
+        "90+ new commands!"
+    ],
+    "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
+    "minVersion": "7.0"
 }
