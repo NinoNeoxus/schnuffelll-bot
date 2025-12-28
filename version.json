@@ -1,9 +1,9 @@
 {
-    "version": "8.3.3-beta",
-    "build": "2024122805",
+    "version": "8.4",
+    "build": "2024122806",
     "releaseDate": "2024-12-28",
     "changelog": [
-        "🔥 Version 8.3.3-Beta (INTERACTIVE & AESTHETIC)",
+        "🔥 Version 8.4 (MAJOR UPDATE)",
         "",
         "✅ Interactive Server List",
         "   - Modern Inline Keyboard Interface",
@@ -15,7 +15,11 @@
         "   - Click to Delete/Reset Password",
         "",
         "⚡ Integrated Flow",
-        "   - Seamless transition between Lists and Detail Menus"
+        "   - Seamless transition between Lists and Detail Menus",
+        "",
+        "🛠️ System Stability",
+        "   - Fixed Auto-Update Mechanism",
+        "   - Robust Restart System"
     ],
     "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-database/main/latest.zip",
     "minVersion": "7.0"
