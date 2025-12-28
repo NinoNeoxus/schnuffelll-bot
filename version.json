@@ -1,21 +1,17 @@
 {
-    "version": "8.3.1-beta",
-    "build": "2024122803",
+    "version": "8.3.2-beta",
+    "build": "2024122804",
     "releaseDate": "2024-12-28",
     "changelog": [
-        "🔥 Version 8.3.1-Beta (FEATURE FIXES & CLEANUP)",
+        "🔥 Version 8.3.2-Beta (MODERNIZATION)",
         "",
-        "✅ Added Dynamic DigitalOcean Management",
-        "   - /adddo, /deldo, /listdo fully functional",
-        "   - Create VPS supports multiple accounts dynamically",
+        "✅ Unified Panel Menu (/panel)",
+        "   - One command for all panel stats/users/servers",
+        "   - Aesthetic Inline Interface",
         "",
-        "✅ Fixed Hidden/Ghost Menus",
-        "   - DNS Menu accessible via Owner Menu",
-        "   - DO Menu accessible via Owner Menu",
-        "",
-        "✅ Cleanup & Optimization",
-        "   - Removed legacy code in VPS module",
-        "   - Safer CVPS logic"
+        "✅ Cleaned Up Legacy Code",
+        "   - Removed obsolete panel scripts",
+        "   - Optimized codebase"
     ],
     "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-database/main/latest.zip",
     "minVersion": "7.0"
