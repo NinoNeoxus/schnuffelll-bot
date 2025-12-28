@@ -1,17 +1,21 @@
 {
-    "version": "8.3.0-beta",
-    "build": "2024122802",
+    "version": "8.3.1-beta",
+    "build": "2024122803",
     "releaseDate": "2024-12-28",
     "changelog": [
-        "🔥 Version 8.3-Beta (FIX CRASH)",
+        "🔥 Version 8.3.1-Beta (FEATURE FIXES & CLEANUP)",
         "",
-        "✅ Fixed CRASH on Install Menu (Message too long)",
-        "✅ Simplified Install Menu Visualization",
-        "✅ Fixed 'Ghost Features' disappearing from inline",
-        "✅ Added 'List VPS' to Inline Menu",
-        "✅ Fixed Update Loop & Zip Structure",
-        "✅ Safe Update Mode (No more file loss)",
-        "✅ Improved VPS Menu Navigation"
+        "✅ Added Dynamic DigitalOcean Management",
+        "   - /adddo, /deldo, /listdo fully functional",
+        "   - Create VPS supports multiple accounts dynamically",
+        "",
+        "✅ Fixed Hidden/Ghost Menus",
+        "   - DNS Menu accessible via Owner Menu",
+        "   - DO Menu accessible via Owner Menu",
+        "",
+        "✅ Cleanup & Optimization",
+        "   - Removed legacy code in VPS module",
+        "   - Safer CVPS logic"
     ],
     "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-database/main/latest.zip",
     "minVersion": "7.0"
