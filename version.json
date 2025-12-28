@@ -1,7 +1,7 @@
 {
-    "version": "8.1",
-    "build": "2024122721",
-    "releaseDate": "2025-12-27",
+    "version": "8.2.0-beta",
+    "build": "2024122801",
+    "releaseDate": "2024-12-28",
     "changelog": [
         "🎉 Version 8.1 - MEGA UPDATE!",
         "",
@@ -43,6 +43,6 @@
         "  Fixed Linux ZIP extraction fallback",
         "  Improved callback query handling"
     ],
-    "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
+    "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-database/main/latest.zip",
     "minVersion": "7.0"
 }
