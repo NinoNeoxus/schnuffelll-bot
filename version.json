@@ -1,17 +1,21 @@
 {
-    "version": "8.3.2-beta",
-    "build": "2024122804",
+    "version": "8.3.3-beta",
+    "build": "2024122805",
     "releaseDate": "2024-12-28",
     "changelog": [
-        "🔥 Version 8.3.2-Beta (MODERNIZATION)",
+        "🔥 Version 8.3.3-Beta (INTERACTIVE & AESTHETIC)",
         "",
-        "✅ Unified Panel Menu (/panel)",
-        "   - One command for all panel stats/users/servers",
-        "   - Aesthetic Inline Interface",
+        "✅ Interactive Server List",
+        "   - Modern Inline Keyboard Interface",
+        "   - One-Click Manage (Start/Stop/Info)",
+        "   - Auto Pagination (Next/Prev)",
         "",
-        "✅ Cleaned Up Legacy Code",
-        "   - Removed obsolete panel scripts",
-        "   - Optimized codebase"
+        "✅ Interactive User Manager",
+        "   - Inline User List with Roles",
+        "   - Click to Delete/Reset Password",
+        "",
+        "⚡ Integrated Flow",
+        "   - Seamless transition between Lists and Detail Menus"
     ],
     "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-database/main/latest.zip",
     "minVersion": "7.0"
