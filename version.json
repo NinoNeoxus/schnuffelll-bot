@@ -1,15 +1,8 @@
 {
-    "version": "8.2.0-beta",
-    "build": "2024122801",
+    "version": "8.3.0-beta",
+    "build": "2024122802",
     "releaseDate": "2024-12-28",
     "changelog": [
-        "🎉 Version 8.1 - MEGA UPDATE!",
-        "",
-        "📦 PANEL MANAGEMENT (10 Commands)",
-        "  /panelinfo, /panelusers, /panelservers",
-        "  /panelnodes, /panelstats, /panelhealth",
-        "  /panelbackup, /panelrestart, /panelclear",
-        "",
         "🔥 Version 8.3-Beta (FIX CRASH)",
         "",
         "✅ Fixed CRASH on Install Menu (Message too long)",
