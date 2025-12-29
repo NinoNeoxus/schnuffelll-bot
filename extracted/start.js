@@ -374,28 +374,25 @@ module.exports = (bot) => {
     }
 
     // === SIMPLE WELCOME TEXT (untuk handle batasan Telegram) ===
-    const welcomeText = `
-<b>⚡ 𝐒𝐂𝐇𝐍𝐔𝐅𝐅𝐄𝐋𝐋𝐋 𝐁𝐎𝐓 ⚡</b>
-<code>━━━━━━━━━━━━━━━━━━━━━━</code>
-<b>🎉 Version 8.0 | Panel Manager</b>
-<code>━━━━━━━━━━━━━━━━━━━━━━</code>
+    const welcomeText = `⚡ *𝐒𝐂𝐇𝐍𝐔𝐅𝐅𝐄𝐋𝐋𝐋 𝐁𝐎𝐓* ⚡
+━━━━━━━━━━━━━━━━━━━━━━
+🎉 *Version 8.7* | Panel Manager
+━━━━━━━━━━━━━━━━━━━━━━
 
-👋 <i>Assalamu'alaikum,</i> <b>@${msg.from.username || msg.from.first_name}</b>!
+👋 _Assalamu'alaikum,_ *@${msg.from.username || msg.from.first_name}*!
 
-<blockquote>
-📊 <b>INFO</b>
-┣ 🎭 Status: <b>${status}</b>
-┣ 👥 Users: <b>${total}</b>
+📊 *INFO*
+┣ 🎭 Status: *${status}*
+┣ 👥 Users: *${total}*
 ┣ ⏰ ${waktu}
-┗ 📡 Uptime: <b>${vpsUptimeStr}</b>
-</blockquote>
+┗ 📡 Uptime: *${vpsUptimeStr}*
 
-${ownerSettings.menuCaption || "🔽 <i>Klik tombol dibawah untuk membuka menu:</i>"}
+${ownerSettings.menuCaption || "🔽 _Klik tombol dibawah untuk membuka menu:_"}
 `;
 
     // Simple keyboard dengan 1 tombol Menu saja
     const simpleKeyboard = {
-      parse_mode: "HTML",
+      parse_mode: "Markdown",
       reply_to_message_id: msg.message_id,
       reply_markup: {
         inline_keyboard: [
@@ -473,7 +470,7 @@ ${ownerSettings.menuCaption || "🔽 <i>Klik tombol dibawah untuk membuka menu:<
         console.error('Error sending media:', err.message);
         // Basic Fallback if main media fails
         try {
-          await bot.sendMessage(chatId, welcomeText + '\n\n⚠️ _Media gagal dimuat, cek URL di /pengaturan_', { ...simpleKeyboard, parse_mode: 'Markdown' });
+          await bot.sendMessage(chatId, welcomeText + '\n\n⚠️ _Media gagal dimuat, cek URL di /pengaturan_', simpleKeyboard);
         } catch (e) {
           console.error('Error sending fallback:', e.message);
         }
@@ -562,17 +559,61 @@ ${ownerSettings.menuCaption || "🔽 <i>Klik tombol dibawah untuk membuka menu:<
     }
   });
 
-  // Handler untuk tombol Pengaturan (callback)
+  // Handler untuk tombol Pengaturan (callback) - handle both "pengaturanbot" and "pengaturan"
   bot.on("callback_query", (callbackQuery) => {
-    if (callbackQuery.data === "pengaturanbot") {
+    if (callbackQuery.data === "pengaturanbot" || callbackQuery.data === "pengaturan") {
       bot.answerCallbackQuery(callbackQuery.id);
       const userId = callbackQuery.from.id.toString();
       // Cek owner
       if (!ownerUsers.includes(userId)) {
         return bot.sendMessage(callbackQuery.message.chat.id, "❌ Khusus Owner!");
       }
-      // Trigger command /pengaturan secara manual atau kasih info
-      bot.sendMessage(callbackQuery.message.chat.id, "🔧 Gunakan command `/pengaturan` untuk mengubah tampilan bot.", { parse_mode: "Markdown" });
+      // Kirim menu pengaturan lengkap
+      const pengaturanText = `
+⚙️ *PENGATURAN BOT*
+━━━━━━━━━━━━━━━━━━━━━━
+
+📋 *Daftar Command:*
+
+🖼️ *Tampilan Menu:*
+• \`/setmenutype\` - Ubah tipe (text/image/video)
+• \`/setmenuurl\` - Set URL media
+• \`/setmenucaption\` - Set caption menu
+
+🔧 *Panel Settings:*
+• \`/seturl\` - Set domain panel
+• \`/setplta\` - Set API key panel
+• \`/setpltc\` - Set client key
+
+📡 *Node & VPS:*
+• \`/gencert\` - Generate SSL certificate
+• \`/debug\` - Debug Wings
+
+💰 *Payment:*
+• \`/setdana\` - Set nomor Dana
+• \`/setqris\` - Set QRIS image
+
+━━━━━━━━━━━━━━━━━━━━━━
+_Ketik command di atas untuk mengubah pengaturan_
+`;
+      bot.sendMessage(callbackQuery.message.chat.id, pengaturanText, { 
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: "🖼️ Set Menu Type", switch_inline_query_current_chat: "/setmenutype " },
+              { text: "🔗 Set Menu URL", switch_inline_query_current_chat: "/setmenuurl " }
+            ],
+            [
+              { text: "🔐 Gen SSL Cert", switch_inline_query_current_chat: "/gencert " },
+              { text: "🐛 Debug Wings", switch_inline_query_current_chat: "/debug " }
+            ],
+            [
+              { text: "🔙 KEMBALI", callback_data: "openmainmenu" }
+            ]
+          ]
+        }
+      });
     }
   });
 
@@ -1296,6 +1337,7 @@ ${ownerSettings.menuCaption || "🔽 <i>Klik tombol dibawah untuk membuka menu:<
 │ 🖥️ <b>VPS Management</b>
 │ 🎨 <b>Theme & Customization</b>
 │ 🛡️ <b>Security & Recovery</b>
+│ 🔐 <b>SSL Certificate</b>
 │
 ╰───────────────────────◊
 `;
@@ -1312,6 +1354,10 @@ ${ownerSettings.menuCaption || "🔽 <i>Klik tombol dibawah untuk membuka menu:<
             [
               { text: "📡 Create Node", switch_inline_query_current_chat: "/createnode" },
               { text: "🎨 Install Theme", switch_inline_query_current_chat: "/installtema" }
+            ],
+            [
+              { text: "🔐 Gen SSL Cert", switch_inline_query_current_chat: "/gencert " },
+              { text: "🐛 Debug Wings", switch_inline_query_current_chat: "/debug " }
             ],
             [
               { text: "🔑 Change Pass", switch_inline_query_current_chat: "/usrpanel " },
