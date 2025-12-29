@@ -400,102 +400,14 @@ module.exports = (bot) => {
     });
 
     // ═══════════════════════════════════════════════════════════════════════════════
-    // /cadp <name>,<id_tele> [version] - Create Admin Panel (Legacy Support)
+    // NOTE: /cadp command has been REMOVED from this file to prevent conflict
+    // The main /cadp command is in panel.js which includes:
+    // - Premium user access check
+    // - Public panel group check
+    // - Better integration with panel settings
+    // 
+    // If you need owner-only version, use /cadpv2, /cadpv3, etc in panel.js
     // ═══════════════════════════════════════════════════════════════════════════════
-    bot.onText(/^\/cadp(?:\s+(.+))?$/i, async (msg, match) => {
-        const chatId = msg.chat.id;
-        const userId = msg.from.id.toString();
-
-        if (!isOwner(userId) && userId !== settings.ownerId.toString()) {
-            return bot.sendMessage(chatId, '❌ ᴋʜᴜꜱᴜꜱ ᴏᴡɴᴇʀ!');
-        }
-
-        if (!match[1]) {
-            return bot.sendMessage(chatId, '❌ Format: /cadp name,telegram_id [version]\n\nContoh: /cadp john,123456789 1');
-        }
-
-        const parts = match[1].split(',').map(x => x.trim());
-        if (parts.length < 2) {
-            return bot.sendMessage(chatId, '❌ Format: /cadp name,telegram_id [version]\n\nContoh: /cadp john,123456789 1');
-        }
-
-        const panelName = parts[0];
-        const targetId = parts[1];
-        // Check for version in the last part or implicitly
-        // If parts[2] exists, it might be version
-        let version = 1;
-        if (parts[2]) version = parseInt(parts[2]);
-        // Or if the input style was "/cadp name,id 2" (space separated version) - match regex handles space after command
-        // But match[1] is the whole string. 
-        // Let's refine parsing.
-
-        // Split by space to check for version at the end
-        const args = match[1].split(/\s+/);
-        // This is tricky if comma is used. Let's stick to simple comma splitting and valid int check
-        const lastPart = parts[parts.length - 1];
-        const possibleVersion = lastPart.split(' ')[1]; // "id 2"
-        if (possibleVersion) {
-            version = parseInt(possibleVersion);
-            parts[parts.length - 1] = lastPart.split(' ')[0]; // clean id
-        } else if (parts[2] && !isNaN(parts[2])) {
-            version = parseInt(parts[2]);
-        }
-
-        const password = panelName + Math.random().toString(36).slice(2, 6);
-        const config = getPanelConfig(version);
-        const wait = await bot.sendMessage(chatId, `⏳ Creating admin for ${panelName}...`);
-
-        try {
-            const data = await panelApi('/application/users', 'POST', {
-                email: `${panelName}@admin.schnuffelll`,
-                username: panelName,
-                first_name: panelName,
-                last_name: 'Admin',
-                language: 'en',
-                root_admin: true,
-                password: password
-            }, version);
-
-            const user = data.attributes;
-            const caption = `🔐 <b>Sukses Created Admin Panel v${version}!</b>
-
-👤 Username: <code>${user.username}</code>
-🔑 Password: <code>${password}</code>
-🌐 Login: ${config.domain}
-
-<blockquote>📌 Catatan :
-Simpan informasi data ini dengan aman
-dan jangan bagikan ke orang lain!</blockquote>
-`;
-
-            // Try sending to target
-            try {
-                if (settings.panel) {
-                    await bot.sendPhoto(targetId, settings.panel, { caption, parse_mode: 'HTML' });
-                } else {
-                    await bot.sendMessage(targetId, caption, { parse_mode: 'HTML' });
-                }
-                bot.editMessageText(`✅ <b>Admin Created!</b>\n\nSent to: <code>${targetId}</code>`, {
-                    chat_id: chatId,
-                    message_id: wait.message_id,
-                    parse_mode: 'HTML'
-                });
-            } catch (sendErr) {
-                bot.editMessageText(`✅ <b>Admin Created!</b> (Gagal kirim ke user)\n\n👤 User: <code>${user.username}</code>\n🔑 Pass: <code>${password}</code>`, {
-                    chat_id: chatId,
-                    message_id: wait.message_id,
-                    parse_mode: 'HTML'
-                });
-            }
-
-        } catch (error) {
-            const errMsg = error.response?.data?.errors?.[0]?.detail || error.message;
-            bot.editMessageText(`❌ Error: ${errMsg}`, {
-                chat_id: chatId,
-                message_id: wait.message_id
-            });
-        }
-    });
 
     // ═══════════════════════════════════════════════════════════════════════════════
     // /userexport [version] - Export user list

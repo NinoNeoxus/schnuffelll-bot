@@ -51,20 +51,32 @@ module.exports = (bot) => {
     "Authorization": `Bearer ${token}`
   });
 
-  // Helper: Create Droplet
+  // Helper: Create Droplet with enhanced logging
   async function createVPSDroplet(apiKey, name, specId, imageId, regionId, password) {
     const spec = vpsSpecs[specId];
     const img = vpsImages[imageId];
     const reg = vpsRegions[regionId];
+
+    // Validate inputs
+    if (!spec) throw new Error(`Invalid spec ID: ${specId}. Available: ${Object.keys(vpsSpecs).join(', ')}`);
+    if (!img) throw new Error(`Invalid image ID: ${imageId}. Available: ${Object.keys(vpsImages).join(', ')}`);
+    if (!reg) throw new Error(`Invalid region ID: ${regionId}. Available: ${Object.keys(vpsRegions).join(', ')}`);
 
     const body = {
       name: name,
       region: reg.slug,
       size: spec.slug,
       image: img.slug,
-      user_data: `#!/bin/bash\necho "root:${password}" | chpasswd`, // Set root password
+      user_data: `#!/bin/bash\necho "root:${password}" | chpasswd\nsed -i 's/PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config\nsed -i 's/PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config\nsystemctl restart sshd`,
       tags: ["schnuffelll-bot"]
     };
+
+    // Log request for debugging
+    console.log(`[CREATEVPS] Creating droplet:`);
+    console.log(`  - Name: ${name}`);
+    console.log(`  - Spec: ${spec.name} (${spec.slug})`);
+    console.log(`  - Image: ${img.name} (${img.slug})`);
+    console.log(`  - Region: ${reg.name} (${reg.slug})`);
 
     const response = await fetch("https://api.digitalocean.com/v2/droplets", {
       method: "POST",
@@ -73,7 +85,23 @@ module.exports = (bot) => {
     });
 
     const data = await response.json();
-    if (!response.ok) throw new Error(data.message || "Failed to create droplet");
+
+    // Enhanced error handling
+    if (!response.ok) {
+      console.error(`[CREATEVPS] Error response:`, JSON.stringify(data, null, 2));
+
+      // Check for specific errors
+      if (data.id === 'service_unavailable') {
+        throw new Error(`Region ${reg.slug} tidak tersedia untuk spec ${spec.slug}. Coba region lain.`);
+      }
+      if (data.id === 'bad_request' && data.message?.includes('size')) {
+        throw new Error(`Spec ${spec.slug} tidak valid atau tidak tersedia di region ${reg.slug}.`);
+      }
+
+      throw new Error(data.message || `Failed to create droplet (${response.status})`);
+    }
+
+    console.log(`[CREATEVPS] Droplet created! ID: ${data.droplet.id}`);
     return data.droplet.id;
   }
 
@@ -119,32 +147,48 @@ module.exports = (bot) => {
     fs.writeFileSync(file, JSON.stringify(vpsData, null, 2));
   }
 
-  // DATA SPEK VPS
+  // DATA SPEK VPS - Extended with more options
   const vpsSpecs = {
+    // Basic Droplets
     "1": { name: "1GB / 1 CPU ($6)", slug: "s-1vcpu-1gb", icon: "🥉" },
     "2": { name: "2GB / 1 CPU ($12)", slug: "s-1vcpu-2gb", icon: "🥈" },
     "3": { name: "2GB / 2 CPU ($18)", slug: "s-2vcpu-2gb", icon: "🥇" },
     "4": { name: "4GB / 2 CPU ($24)", slug: "s-2vcpu-4gb", icon: "💎" },
     "5": { name: "8GB / 4 CPU ($48)", slug: "s-4vcpu-8gb", icon: "🚀" },
-    "6": { name: "16GB / 8 CPU (Basic)", slug: "s-8vcpu-16gb", icon: "🔥" },
-    "7": { name: "32GB / 8 CPU (Basic)", slug: "s-8vcpu-32gb", icon: "🌋" },
-    "8": { name: "16GB / 2 CPU (Mem-Opt)", slug: "m-2vcpu-16gb", icon: "🧠" },
-    "9": { name: "32GB / 4 CPU (Mem-Opt)", slug: "m-4vcpu-32gb", icon: "🧠" }
+    // 16GB Options
+    "6": { name: "16GB / 8 CPU Basic ($96)", slug: "s-8vcpu-16gb", icon: "🔥" },
+    "7": { name: "16GB / 4 CPU Regular ($96)", slug: "g-4vcpu-16gb", icon: "⚡" },
+    "8": { name: "16GB / 2 CPU Memory-Opt ($84)", slug: "m-2vcpu-16gb", icon: "🧠" },
+    // 32GB Options
+    "9": { name: "32GB / 8 CPU Basic ($192)", slug: "s-8vcpu-32gb", icon: "🌋" },
+    "10": { name: "32GB / 4 CPU Memory-Opt ($168)", slug: "m-4vcpu-32gb", icon: "🧠" },
+    "11": { name: "32GB / 8 CPU Regular ($192)", slug: "g-8vcpu-32gb", icon: "💫" },
+    // Premium Options
+    "12": { name: "64GB / 16 CPU Regular ($384)", slug: "g-16vcpu-64gb", icon: "🌟" },
+    "13": { name: "48GB / 12 CPU CPU-Opt ($504)", slug: "c-12-intel-48gb", icon: "🔥" },
+    // Dedicated CPU
+    "14": { name: "16GB / 4 CPU Dedicated ($120)", slug: "c-4", icon: "💪" },
+    "15": { name: "32GB / 8 CPU Dedicated ($240)", slug: "c-8", icon: "💪" }
   };
 
   const vpsImages = {
     "1": { name: "Debian 10", slug: "debian-10-x64", icon: "🍥" },
     "2": { name: "Debian 11", slug: "debian-11-x64", icon: "🍥" },
-    "3": { name: "Ubuntu 20.04", slug: "ubuntu-20-04-x64", icon: "🟠" },
-    "4": { name: "Ubuntu 22.04", slug: "ubuntu-22-04-x64", icon: "🟠" }
+    "3": { name: "Debian 12", slug: "debian-12-x64", icon: "🍥" },
+    "4": { name: "Ubuntu 20.04", slug: "ubuntu-20-04-x64", icon: "🟠" },
+    "5": { name: "Ubuntu 22.04", slug: "ubuntu-22-04-x64", icon: "🟠" },
+    "6": { name: "Ubuntu 24.04", slug: "ubuntu-24-04-x64", icon: "🟠" }
   };
 
   const vpsRegions = {
     "1": { name: "Singapore", slug: "sgp1", flag: "🇸🇬" },
-    "2": { name: "New York", slug: "nyc1", flag: "🇺🇸" },
-    "3": { name: "London", slug: "lon1", flag: "🇬🇧" },
-    "4": { name: "Amsterdam", slug: "ams3", flag: "🇳🇱" },
-    "5": { name: "Bangalore", slug: "blr1", flag: "🇮🇳" }
+    "2": { name: "New York 1", slug: "nyc1", flag: "🇺🇸" },
+    "3": { name: "New York 3", slug: "nyc3", flag: "🇺🇸" },
+    "4": { name: "London", slug: "lon1", flag: "🇬🇧" },
+    "5": { name: "Amsterdam", slug: "ams3", flag: "🇳🇱" },
+    "6": { name: "Frankfurt", slug: "fra1", flag: "🇩🇪" },
+    "7": { name: "Bangalore", slug: "blr1", flag: "🇮🇳" },
+    "8": { name: "Sydney", slug: "syd1", flag: "🇦🇺" }
   };
 
   // ═══════════════════════════════════════════════════════════════════════════════

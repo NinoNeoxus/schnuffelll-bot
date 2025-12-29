@@ -425,42 +425,87 @@ Ketik *yes* untuk lanjut atau *cancel* untuk batal.`,
     }
   }
 
-  // fungsi eksekusi SSH
+  // fungsi eksekusi SSH dengan enhanced logging
 
   function runCreateNode(chatId, msg, { ipvps, passwd, domainnode, ramvps }) {
     const conn = new Client();
     const connSettings = { host: ipvps, port: 22, username: 'root', password: passwd };
 
+    // Log untuk debugging
+    console.log('[CREATENODE] ═══════════════════════════════════════════');
+    console.log('[CREATENODE] Starting node creation...');
+    console.log(`[CREATENODE] IP: ${ipvps}`);
+    console.log(`[CREATENODE] Domain: ${domainnode}`);
+    console.log(`[CREATENODE] RAM: ${ramvps}`);
+    console.log('[CREATENODE] ═══════════════════════════════════════════');
+
+    // Notifikasi owner untuk logging
+    const now = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+    bot.sendMessage(OWNER_ID, `📡 <b>[CREATENODE LOG]</b>
+<blockquote>🕐 ${now}
+📍 IP: <code>${ipvps}</code>
+🌐 Domain: <code>${domainnode}</code>
+💾 RAM: ${ramvps}
+👤 User: ${msg.from.first_name} (${msg.from.id})</blockquote>`, { parse_mode: 'HTML' }).catch(() => { });
+
     conn.on('ready', () => {
-      bot.sendMessage(chatId, '📡 ᴍᴇᴍᴘʀᴏꜱᴇꜱ ᴄʀᴇᴀᴛᴇ ɴᴏᴅᴇ...\n⏳ Tunggu 5-15 menit hingga selesai.', { parse_mode: 'Markdown' });
+      console.log('[CREATENODE] SSH connection established');
+
+      const statusMsg = bot.sendMessage(chatId, `📡 <b>CREATE NODE PROGRESS</b>
+
+⏳ <b>Status:</b> Connecting to VPS...
+📍 <b>IP:</b> <code>${ipvps}</code>
+🌐 <b>Domain:</b> <code>${domainnode}</code>
+💾 <b>RAM:</b> ${ramvps}
+
+⏱️ Estimasi: 5-15 menit`, { parse_mode: 'HTML' });
 
       // Use shell instead of exec for interactive scripts
       conn.shell((err, stream) => {
         if (err) {
-          bot.sendMessage(chatId, '❌ Terjadi kesalahan saat membuka shell.');
+          console.error('[CREATENODE] Shell error:', err.message);
+          bot.sendMessage(chatId, `❌ <b>Error membuka shell!</b>\n\n<code>${err.message}</code>`, { parse_mode: 'HTML' });
           return conn.end();
         }
 
         let outputBuffer = '';
         let inputsSent = false;
         let installComplete = false;
+        let lastProgress = '';
 
         stream.on('close', async () => {
+          console.log('[CREATENODE] Stream closed');
+
           if (!installComplete) {
             installComplete = true;
+
+            // Log output untuk debugging
+            console.log('[CREATENODE] Installation output (last 500 chars):');
+            console.log(outputBuffer.slice(-500));
+
             // Coba auto-create Node di panel pakai Application API
+            console.log('[CREATENODE] Attempting to create node in panel...');
             await createPanelNode(domainnode, ramvps, chatId);
 
             // Notifikasi utama ke user
             bot.sendMessage(chatId, `
 <b>✅ Sukses Create Node (Wings + Panel)!</b>
-<blockquote expandable>⚠️ <b>Token Deployment</b>
+
+📍 <b>IP VPS:</b> <code>${ipvps}</code>
+🌐 <b>Domain Node:</b> <code>${domainnode}</code>
+💾 <b>RAM:</b> ${ramvps}
+
+<blockquote expandable>⚠️ <b>LANGKAH SELANJUTNYA:</b>
 1. Login panel Pterodactyl
 2. Buka menu <b>Nodes</b> dan pilih node yang sesuai
 3. Klik tab "Configuration"
 4. Auto Generate Token, salin
-5. Ketik /swings ipvps,pwvps,token
-</blockquote>`, { parse_mode: 'HTML', reply_to_message_id: msg.message_id });
+5. Ketik <code>/swings ${ipvps},PASSWORD,TOKEN</code>
+</blockquote>
+
+💡 Jika Wings tidak bisa start, pastikan firewall port 8080 dan 2022 terbuka.`, { parse_mode: 'HTML', reply_to_message_id: msg.message_id });
+
+            console.log('[CREATENODE] Node creation completed successfully');
           }
           conn.end();
         });
@@ -468,39 +513,81 @@ Ketik *yes* untuk lanjut atau *cancel* untuk batal.`,
         stream.on('data', (data) => {
           const out = data.toString();
           outputBuffer += out;
-          console.log('STDOUT:', out);
+
+          // Log dengan prefix untuk mudah filter
+          const lines = out.split('\n').filter(l => l.trim());
+          lines.forEach(line => {
+            console.log('[CREATENODE-SSH]', line);
+          });
+
+          // Detect progress dan kirim update
+          if (out.includes('Installing Wings')) {
+            if (lastProgress !== 'wings') {
+              lastProgress = 'wings';
+              console.log('[CREATENODE] Progress: Installing Wings...');
+            }
+          }
+          if (out.includes('Configuring') || out.includes('Setting up')) {
+            if (lastProgress !== 'config') {
+              lastProgress = 'config';
+              console.log('[CREATENODE] Progress: Configuring...');
+            }
+          }
+          if (out.includes('Complete') || out.includes('Success') || out.includes('Done')) {
+            console.log('[CREATENODE] Progress: Detected completion signal');
+          }
 
           // Detect prompts and send appropriate inputs with delays
           if (!inputsSent) {
             inputsSent = true;
+            console.log('[CREATENODE] Sending installer command...');
+
             // Start installer with delays between inputs
             stream.write('bash <(curl -s https://raw.githubusercontent.com/NinoNeoxus/Node/refs/heads/main/install.sh)\n');
 
             // Send inputs with proper delays
-            setTimeout(() => stream.write('schnuffellllganteng\n'), 3000);
-            setTimeout(() => stream.write('4\n'), 5000);
-            setTimeout(() => stream.write('SG\n'), 7000);
-            setTimeout(() => stream.write('@schnuffelllldev\n'), 9000);
-            setTimeout(() => stream.write(`${domainnode}\n`), 11000);
-            setTimeout(() => stream.write('NODE BY SCHNUFFELLLL\n'), 13000);
-            setTimeout(() => stream.write(`${ramvps}\n`), 15000);
-            setTimeout(() => stream.write(`${ramvps}\n`), 17000);
-            setTimeout(() => stream.write('1\n'), 19000);
+            const inputs = [
+              { delay: 3000, value: 'schnuffellllganteng', desc: 'password' },
+              { delay: 5000, value: '4', desc: 'location selection' },
+              { delay: 7000, value: 'SG', desc: 'region' },
+              { delay: 9000, value: '@schnuffelllldev', desc: 'contact' },
+              { delay: 11000, value: domainnode, desc: 'domain' },
+              { delay: 13000, value: 'NODE BY SCHNUFFELLLL', desc: 'node name' },
+              { delay: 15000, value: ramvps, desc: 'RAM allocation' },
+              { delay: 17000, value: ramvps, desc: 'disk allocation' },
+              { delay: 19000, value: '1', desc: 'confirmation' }
+            ];
+
+            inputs.forEach(input => {
+              setTimeout(() => {
+                console.log(`[CREATENODE] Sending input (${input.desc}): ${input.value}`);
+                stream.write(`${input.value}\n`);
+              }, input.delay);
+            });
 
             // Close stream after sufficient time for installation
             setTimeout(() => {
+              console.log('[CREATENODE] Sending exit command...');
               stream.write('exit\n');
             }, 5 * 60 * 1000); // Wait 5 minutes for installation
           }
         });
 
         stream.stderr.on('data', (data) => {
-          console.log('STDERR:', data.toString());
+          console.error('[CREATENODE-ERR]', data.toString());
         });
       });
     }).on('error', (err) => {
-      console.log('Connection Error:', err);
-      bot.sendMessage(chatId, '❌ Katasandi atau IP tidak valid!');
+      console.error('[CREATENODE] Connection Error:', err.message);
+      bot.sendMessage(chatId, `❌ <b>Gagal koneksi ke VPS!</b>
+
+<b>Error:</b> <code>${err.message}</code>
+
+<b>Kemungkinan penyebab:</b>
+• IP VPS salah
+• Password salah
+• Port 22 tidak terbuka
+• VPS sedang down`, { parse_mode: 'HTML' });
     }).connect(connSettings);
   }
 
@@ -1602,7 +1689,7 @@ Silahkan tunggu 10-20 menit...
 
           stream.on("close", () => {
             updateLogs("🔄 Konfigurasi selesai...");
-            
+
             // Extract node domain dari config untuk generate SSL
             updateLogs("🔐 Mengecek & generate SSL certificate...");
             const sslCheckCmd = `
@@ -1634,17 +1721,17 @@ Silahkan tunggu 10-20 menit...
               systemctl start nginx 2>/dev/null || true
               systemctl start apache2 2>/dev/null || true
             `;
-            
+
             conn.exec(sslCheckCmd, (errSSL, streamSSL) => {
               if (errSSL) {
                 updateLogs("⚠️ Gagal cek SSL: " + errSSL.message + " - Lanjut restart wings...");
               }
-              
+
               if (streamSSL) {
                 streamSSL.stdout.on("data", (data) => updateLogs("SSL: " + data.toString().trim()));
                 streamSSL.stderr.on("data", (data) => updateLogs("SSL ERR: " + data.toString().trim()));
               }
-              
+
               // Tunggu sebentar lalu restart wings
               setTimeout(() => {
                 updateLogs("🔄 Mencoba menjalankan wings...");
@@ -1862,7 +1949,7 @@ Silahkan tunggu 10-20 menit...
     conn.on('ready', () => {
       updateLogs('✅ SSH Connected!');
       updateLogs('🛑 Menghentikan nginx/apache untuk free port 80...');
-      
+
       // Command untuk generate SSL
       const genCertCmd = `
         # Stop services yang pakai port 80
@@ -1900,7 +1987,7 @@ Silahkan tunggu 10-20 menit...
         systemctl start nginx 2>/dev/null || true
         systemctl start apache2 2>/dev/null || true
       `;
-      
+
       conn.exec(genCertCmd, (err, stream) => {
         if (err) {
           updateLogs('❌ Gagal menjalankan command: ' + err.message);
@@ -1919,10 +2006,10 @@ Silahkan tunggu 10-20 menit...
               conn.end();
               return;
             }
-            
+
             stream2.stdout.on('data', (data) => updateLogs(data.toString().trim()));
             stream2.stderr.on('data', (data) => updateLogs('ERR: ' + data.toString().trim()));
-            
+
             stream2.on('close', () => {
               updateLogs('\n✅ Proses selesai!');
               updateLogs('💡 Jika masih error, coba /debug untuk melihat log wings.');
@@ -3145,12 +3232,12 @@ ${safeLines}`;
 
           // Detect when script asks for reboot
           // Script reinstall biasanya output: "Please type 'reboot'" atau "Run: reboot" atau "type reboot"
-          if ((out.toLowerCase().includes('type reboot') || 
-               out.toLowerCase().includes('run: reboot') || 
-               out.toLowerCase().includes('please reboot') ||
-               out.toLowerCase().includes('reboot to start') ||
-               out.toLowerCase().includes('run `reboot`') ||
-               out.toLowerCase().includes("run 'reboot'")) && !rebootDetected) {
+          if ((out.toLowerCase().includes('type reboot') ||
+            out.toLowerCase().includes('run: reboot') ||
+            out.toLowerCase().includes('please reboot') ||
+            out.toLowerCase().includes('reboot to start') ||
+            out.toLowerCase().includes('run `reboot`') ||
+            out.toLowerCase().includes("run 'reboot'")) && !rebootDetected) {
             updateLog('Script minta reboot, mengirim command reboot...', 'sending_reboot');
             setTimeout(() => {
               stream.write('reboot\n');

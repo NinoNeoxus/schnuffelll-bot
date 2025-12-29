@@ -13,8 +13,8 @@ const { checkCooldown } = require('../lib/function');
 
 module.exports = (bot) => {
 
-  // command /info - Bot & User Status
-  bot.onText(/^\/info$/i, async (msg) => {
+  // command /botinfo - Bot & User Status (renamed from /info to avoid conflict with panel.js)
+  bot.onText(/^\/(botinfo|info)$/i, async (msg) => {
     const chatId = msg.chat.id;
     const userId = msg.from.id;
     const user = msg.from;

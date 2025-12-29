@@ -265,9 +265,10 @@ module.exports = (bot) => {
     });
 
     // ═══════════════════════════════════════════════════════════════════════════════
-    // /unli <id> [version] - Set unlimited resources
+    // /srvunli <id> [version] - Set unlimited resources (renamed from /unli to avoid conflict)
+    // NOTE: /unli in panel.js creates user+server with unlimited, this one just modifies existing server
     // ═══════════════════════════════════════════════════════════════════════════════
-    bot.onText(/^\/unli\s+(\d+)(?:\s+(\d))?$/i, async (msg, match) => {
+    bot.onText(/^\/srvunli\s+(\d+)(?:\s+(\d))?$/i, async (msg, match) => {
         const chatId = msg.chat.id;
         const userId = msg.from.id.toString();
 
