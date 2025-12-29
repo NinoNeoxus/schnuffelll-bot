@@ -3,16 +3,16 @@
     "build": "2024122900",
     "releaseDate": "2024-12-29",
     "changelog": [
-        "ðŸ”¥ Version 8.6 MAJOR FIX",
+        "🔥 Version 8.6 MAJOR FIX",
         "",
-        "âœ… RESTORED: panel.js (3364 lines)",
+        "✅ RESTORED: panel.js (3364 lines)",
         "   - /unli, /unliv2-v5",
         "   - /cadp, /cadpv2-v5",
         "   - /1gb - /10gb",
         "   - /info, /servercpu",
         "",
-        "âœ… FIX: Duplicate module loads removed",
-        "âœ… FIX: schnuffelll.js updated to load panel.js"
+        "✅ FIX: Duplicate module loads removed",
+        "✅ FIX: schnuffelll.js updated to load panel.js"
     ],
     "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
     "minVersion": "7.0"

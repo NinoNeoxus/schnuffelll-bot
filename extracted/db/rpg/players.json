@@ -1,0 +1,65 @@
+{
+  "1126396317": {
+    "name": "Nuell",
+    "class": "solo",
+    "level": 100,
+    "xp": 77820,
+    "xpNeeded": 19071808545892,
+    "gold": 644234,
+    "diamonds": 999999999,
+    "hp": 9999999999995100,
+    "maxHp": 1000000000000000000,
+    "mp": 43,
+    "maxMp": 43,
+    "atk": 1000000,
+    "def": 10000000,
+    "spd": 100000000,
+    "luck": 10,
+    "equipped": {
+      "weapon": "legendary_blade",
+      "armor": "legendary_armor",
+      "accessory": null
+    },
+    "augments": {},
+    "housing": "orbital_mansion",
+    "guild": null,
+    "title": "newbie",
+    "survival": {
+      "hunger": 0,
+      "thirst": 0,
+      "stamina": 100,
+      "sanity": 0,
+      "humanity": 100,
+      "lastUpdate": 1766471009845
+    },
+    "stats": {
+      "kills": 7,
+      "deaths": 3,
+      "bosses": 1,
+      "adventures": 7,
+      "hacks": 0,
+      "crafts": 0,
+      "goldEarned": 261280,
+      "goldSpent": 20000
+    },
+    "questProgress": {
+      "kills": 7,
+      "adventures": 7,
+      "bosses": 1
+    },
+    "claimedQuests": [],
+    "claimedAchievements": [],
+    "titles": [
+      "newbie"
+    ],
+    "locationsVisited": [
+      "gang_alley",
+      "deep_net",
+      "quantum_realm"
+    ],
+    "dailyStreak": 0,
+    "lastDaily": 0,
+    "lastGacha": 0,
+    "createdAt": 1765109422559
+  }
+}

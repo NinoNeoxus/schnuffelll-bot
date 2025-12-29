@@ -1,0 +1,162 @@
+{
+  "531970767": {
+    "hostname": "vps",
+    "dropletId": 531970767,
+    "ip": "159.65.92.184",
+    "spec": "Ram 8GB Core 4",
+    "os": "Ubuntu 22.04 LTS",
+    "region": "🇬🇧 London",
+    "password": "u11g3c7c18",
+    "owner": 1126396317
+  },
+  "531981845": {
+    "hostname": "vps",
+    "dropletId": 531981845,
+    "ip": "129.212.224.201",
+    "spec": "Ram 8GB Core 4",
+    "os": "Ubuntu 22.04 LTS",
+    "region": "🇸🇬 Singapore",
+    "password": "c6pkz3dkld",
+    "owner": 1126396317
+  },
+  "537140068": {
+    "hostname": "vps",
+    "dropletId": 537140068,
+    "ip": "143.198.210.196",
+    "spec": "Ram 16GB Core 8",
+    "os": "Ubuntu 22.04 LTS",
+    "region": "🇸🇬 Singapore",
+    "password": "nte6gbnb32",
+    "owner": 1126396317
+  },
+  "537298982": {
+    "hostname": "vps",
+    "dropletId": 537298982,
+    "ip": "143.198.214.212",
+    "spec": "Ram 8GB Core 4",
+    "os": "Ubuntu 24.04 LTS",
+    "region": "🇸🇬 Singapore",
+    "password": "je21kry4nn",
+    "owner": 1126396317
+  },
+  "537565047": {
+    "hostname": "vps",
+    "dropletId": 537565047,
+    "ip": "138.197.131.143",
+    "spec": "Ram 8GB Core 4",
+    "os": "Ubuntu 22.04 LTS",
+    "region": "🇨🇦 Toronto",
+    "password": "hjqi59v9vk",
+    "owner": 1126396317
+  },
+  "537728253": {
+    "hostname": "vps",
+    "dropletId": 537728253,
+    "ip": "188.166.221.26",
+    "spec": "Ram 16GB Core 8",
+    "os": "Ubuntu 22.04 LTS",
+    "region": "🇸🇬 Singapore",
+    "password": "zo9izeq447",
+    "owner": 1126396317
+  },
+  "537797904": {
+    "hostname": "vps",
+    "dropletId": 537797904,
+    "ip": "159.65.130.5",
+    "spec": "Ram 16GB Core 8",
+    "os": "Ubuntu 22.04 LTS",
+    "region": "🇸🇬 Singapore",
+    "password": "ouplx2by6d",
+    "owner": 1126396317
+  },
+  "538035446": {
+    "hostname": "vps",
+    "dropletId": 538035446,
+    "ip": "64.226.119.94",
+    "spec": "Ram 8GB Core 4",
+    "os": "Ubuntu 22.04 LTS",
+    "region": "🇩🇪 Frankfurt",
+    "password": "p6eml2zmwt",
+    "owner": 1126396317
+  },
+  "539075067": {
+    "hostname": "vps",
+    "dropletId": 539075067,
+    "ip": "206.189.150.202",
+    "spec": "Ram 16GB Core 8",
+    "os": "Ubuntu 22.04 LTS",
+    "region": "🇸🇬 Singapore",
+    "password": "7bwq1t21uf",
+    "owner": 1126396317
+  },
+  "539103205": {
+    "hostname": "vps",
+    "dropletId": 539103205,
+    "ip": "192.241.159.16",
+    "spec": "Ram 16GB Core 8",
+    "os": "Debian 12",
+    "region": "🇺🇸 New York",
+    "password": "lnoxu4kc21",
+    "owner": 1126396317
+  },
+  "539139020": {
+    "hostname": "vps",
+    "dropletId": 539139020,
+    "ip": "68.183.201.39",
+    "spec": "Ram 16GB Core 8",
+    "os": "Ubuntu 22.04 LTS",
+    "region": "🇨🇦 Toronto",
+    "password": "kedskngcju",
+    "owner": 1126396317
+  },
+  "539149482": {
+    "hostname": "vps",
+    "dropletId": 539149482,
+    "ip": "68.183.33.59",
+    "spec": "Ram 8GB Core 4",
+    "os": "Ubuntu 22.04 LTS",
+    "region": "🇬🇧 London",
+    "password": "x9oopjxeui",
+    "owner": 1126396317
+  },
+  "539155261": {
+    "hostname": "vps",
+    "dropletId": 539155261,
+    "ip": "129.212.239.68",
+    "spec": "Ram 16GB Core 8",
+    "os": "Ubuntu 22.04 LTS",
+    "region": "🇸🇬 Singapore",
+    "password": "quogljmge6",
+    "owner": 1126396317
+  },
+  "539156877": {
+    "hostname": "vps",
+    "dropletId": 539156877,
+    "ip": "167.172.64.32",
+    "spec": "Ram 16GB Core 8",
+    "os": "Ubuntu 22.04 LTS",
+    "region": "🇸🇬 Singapore",
+    "password": "2jdylcjt82",
+    "owner": 1126396317
+  },
+  "539520263": {
+    "hostname": "vps",
+    "dropletId": 539520263,
+    "ip": "167.172.85.97",
+    "spec": "Ram 16GB Core 8",
+    "os": "Ubuntu 22.04 LTS",
+    "region": "🇸🇬 Singapore",
+    "password": "rkh1fumwbf",
+    "owner": 1126396317
+  },
+  "539650630": {
+    "hostname": "vps",
+    "dropletId": 539650630,
+    "ip": "104.248.44.215",
+    "spec": "Ram 8GB Core 4",
+    "os": "Ubuntu 22.04 LTS",
+    "region": "🇩🇪 Frankfurt",
+    "password": "55gm3e98nq",
+    "owner": 1126396317
+  }
+}

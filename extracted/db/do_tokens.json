@@ -1,0 +1,7 @@
+[
+    {
+        "name": "DO Token 1",
+        "token": "YOUR_DIGITALOCEAN_TOKEN_HERE",
+        "active": true
+    }
+]
