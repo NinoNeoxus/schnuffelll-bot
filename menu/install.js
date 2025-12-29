@@ -3159,7 +3159,7 @@ ${safeLines}`;
 
           // Detect reboot message
           if (out.includes('tail -fn+1 /reinstall.log') || out.includes('To view logs run')) {
-            updateLog('VPS akan reboot, tunggu 2 menit...', 'rebooting');
+            updateLog('VPS akan reboot, tunggu 60 detik...', 'rebooting');
             rebootDetected = true;
 
             // Kirim reboot dulu sebelum disconnect
@@ -3168,11 +3168,16 @@ ${safeLines}`;
               updateLog('Command reboot dikirim!', 'rebooting');
             }, 500);
 
-            // Wait 2 minutes then try to reconnect and stream logs
+            // Close connection setelah kirim reboot
             setTimeout(() => {
               conn.end();
+              updateLog('Menunggu VPS reboot (60 detik)...', 'waiting_reboot');
+            }, 2000);
+
+            // Wait 60 detik dulu baru mulai reconnect (VPS perlu waktu untuk reboot)
+            setTimeout(() => {
               streamReinstallLog(bot, chatId, loadingMsg.message_id, ipvps, pwvps, logBuffer);
-            }, 2 * 60 * 1000);
+            }, 60 * 1000); // 60 detik
           }
         });
 
@@ -3211,7 +3216,8 @@ ${safeLines}`;
     let logBuffer = [...prevLogs, 'Mencoba reconnect setelah reboot...'];
     let currentStatus = 'reconnecting';
     let retryCount = 0;
-    const maxRetries = 10;
+    const maxRetries = 5; // Max 5 kali retry
+    const retryInterval = 60 * 1000; // 60 detik per retry
 
     function formatRebuildLog(ip, status, lines) {
       const safeLines = lines.slice(-15).map(l => `  - "${l.replace(/"/g, '\\"').slice(0, 100)}"`).join('\n') || '  - "(waiting...)"';
@@ -3238,16 +3244,38 @@ ${safeLines}`;
 
     function tryConnect() {
       retryCount++;
-      updateLog(`Retry ${retryCount}/${maxRetries}...`, 'reconnecting');
+      updateLog(`Mencoba reconnect ke VPS... (${retryCount}/${maxRetries})`, 'reconnecting');
 
       const conn = new Client();
       conn.on('ready', () => {
-        updateLog('Reconnected! Streaming log...', 'streaming_log');
+        updateLog('✅ Reconnected! Menjalankan tail log...', 'streaming_log');
 
+        // Jalankan tail -fn+1 /reinstall.log untuk stream log
         conn.exec('tail -fn+1 /reinstall.log', (err, stream) => {
           if (err) {
-            updateLog('Error tail: ' + err.message, 'error');
-            return conn.end();
+            updateLog(`❌ Error tail log: ${err.message}`, 'waiting_reboot');
+            conn.end();
+            // File mungkin belum ada, retry lagi
+            if (retryCount < maxRetries) {
+              updateLog(`⏳ File log belum ada, retry lagi dalam 60 detik... (${retryCount}/${maxRetries})`, 'waiting_reboot');
+              setTimeout(tryConnect, retryInterval);
+            } else {
+              updateLog('❌ Max retries reached (5x)', 'timeout');
+              bot.sendMessage(chatId, `⚠️ **File /reinstall.log belum ditemukan**
+
+Sudah dicoba reconnect 5 kali setiap 60 detik.
+
+Kemungkinan:
+1. VPS masih dalam proses reboot
+2. Script reinstall belum mulai jalan
+3. File log belum dibuat
+
+**Cara manual:**
+1. Login ke VPS: \`ssh root@${ipvps}\`
+2. Cek apakah file ada: \`ls -la /reinstall.log\`
+3. Jika ada, jalankan: \`tail -fn+1 /reinstall.log\``, { parse_mode: 'Markdown' });
+            }
+            return;
           }
 
           let installDone = false;
@@ -3297,20 +3325,26 @@ ${safeLines}`;
       });
 
       conn.on('error', (err) => {
+        updateLog(`❌ Reconnect gagal: ${err.message}`, 'waiting_reboot');
         if (retryCount < maxRetries) {
-          updateLog('Reconnect failed, retrying in 30s...', 'waiting_reboot');
-          setTimeout(tryConnect, 30000);
+          updateLog(`⏳ Retry lagi dalam 60 detik... (${retryCount}/${maxRetries})`, 'waiting_reboot');
+          setTimeout(tryConnect, retryInterval); // 60 detik
         } else {
-          updateLog('Max retries reached', 'timeout');
-          bot.sendMessage(chatId, `⚠️ VPS ${ipvps} masih dalam proses reinstall.
+          updateLog('❌ Max retries reached (5x)', 'timeout');
+          bot.sendMessage(chatId, `⚠️ **Gagal reconnect ke VPS ${ipvps}**
+
+Sudah dicoba reconnect 5 kali setiap 60 detik.
 
 Kemungkinan:
-1. VPS masih reboot/reinstall
+1. VPS masih dalam proses reboot/reinstall
 2. Password sudah berubah
-3. IP berubah
+3. IP berubah atau VPS belum ready
 
-Coba login manual ke VPS dan jalankan:
-\`tail -fn+1 /reinstall.log\``, { parse_mode: 'Markdown' });
+**Cara manual:**
+1. Login ke VPS: \`ssh root@${ipvps}\`
+2. Jalankan: \`tail -fn+1 /reinstall.log\`
+
+Atau tunggu beberapa menit lalu coba reconnect manual.`, { parse_mode: 'Markdown' });
         }
       });
 
