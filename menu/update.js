@@ -20,8 +20,8 @@ const settings = require('../config.js');
 
 // GitHub repository for updates
 const UPDATE_CONFIG = {
-    versionUrl: 'https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-database/main/version.json',
-    downloadUrl: 'https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-database/main/latest.zip',
+    versionUrl: 'https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/version.json',
+    downloadUrl: 'https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip',
     localVersionFile: './version.json',
     downloadPath: './update_download.zip',
     tempExtractPath: './temp_update',
