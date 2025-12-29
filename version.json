@@ -1,26 +1,19 @@
 {
-    "version": "8.4",
-    "build": "2024122806",
-    "releaseDate": "2024-12-28",
+    "version": "8.6",
+    "build": "2024122900",
+    "releaseDate": "2024-12-29",
     "changelog": [
-        "🔥 Version 8.4 (MAJOR UPDATE)",
+        "ðŸ”¥ Version 8.6 MAJOR FIX",
         "",
-        "✅ Interactive Server List",
-        "   - Modern Inline Keyboard Interface",
-        "   - One-Click Manage (Start/Stop/Info)",
-        "   - Auto Pagination (Next/Prev)",
+        "âœ… RESTORED: panel.js (3364 lines)",
+        "   - /unli, /unliv2-v5",
+        "   - /cadp, /cadpv2-v5",
+        "   - /1gb - /10gb",
+        "   - /info, /servercpu",
         "",
-        "✅ Interactive User Manager",
-        "   - Inline User List with Roles",
-        "   - Click to Delete/Reset Password",
-        "",
-        "⚡ Integrated Flow",
-        "   - Seamless transition between Lists and Detail Menus",
-        "",
-        "🛠️ System Stability",
-        "   - Fixed Auto-Update Mechanism",
-        "   - Robust Restart System"
+        "âœ… FIX: Duplicate module loads removed",
+        "âœ… FIX: schnuffelll.js updated to load panel.js"
     ],
-    "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-database/main/latest.zip",
+    "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
     "minVersion": "7.0"
 }
