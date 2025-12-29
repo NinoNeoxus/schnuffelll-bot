@@ -347,6 +347,83 @@ const HELP_DATABASE = {
         }
     },
 
+    // === AUTO-ADD SYSTEM ===
+    autoadd: {
+        category: '🔗 Auto-Add System v8.11',
+        commands: {
+            '/setpermission': {
+                title: '🔐 Set Permission Type',
+                desc: 'Set permission type untuk auto-add (join_channel atau none)',
+                usage: '/setpermission join_channel|none',
+                example: '/setpermission join_channel',
+                steps: [
+                    '1. Ketik /setpermission join_channel',
+                    '2. Set channel dengan /setchannel @channel',
+                    '3. Add bot ke channel dan jadiin admin',
+                    '4. User yang ketik "add" akan di-handle otomatis'
+                ],
+                access: 'Owner'
+            },
+            '/setchannel': {
+                title: '📢 Set Channel',
+                desc: 'Set channel yang wajib di-join untuk auto-add',
+                usage: '/setchannel @channel_username',
+                example: '/setchannel @schnuffelllll',
+                steps: [
+                    '1. Ketik /setchannel @channel_username',
+                    '2. Bot akan cek akses ke channel',
+                    '3. Pastikan bot sudah jadi admin di channel'
+                ],
+                access: 'Owner'
+            },
+            '/setautoadd': {
+                title: '⚙️ Set Auto-Add Role',
+                desc: 'Set role default untuk auto-add (premium/reseller/owner)',
+                usage: '/setautoadd premium|reseller|owner',
+                example: '/setautoadd premium',
+                access: 'Owner'
+            },
+            '/autoaddinfo': {
+                title: '📋 Auto-Add Info',
+                desc: 'Lihat konfigurasi auto-add saat ini',
+                usage: '/autoaddinfo',
+                access: 'Owner'
+            },
+            '/autoaddoff': {
+                title: '❌ Disable Auto-Add',
+                desc: 'Nonaktifkan auto-add untuk grup ini',
+                usage: '/autoaddoff',
+                access: 'Owner'
+            },
+            '/daftar': {
+                title: '📝 Daftar Manual',
+                desc: 'Daftar manual sebagai Premium/Reseller (jika auto-add aktif)',
+                usage: '/daftar',
+                steps: [
+                    '1. Ketik /daftar di grup',
+                    '2. Bot cek apakah sudah join channel',
+                    '3. Jika belum → Minta join channel',
+                    '4. Jika sudah → Auto-add ke role yang di-set'
+                ],
+                access: 'Semua'
+            },
+            'Ketik "add"': {
+                title: '🔗 Auto-Add Trigger',
+                desc: 'Ketik kata "add" di grup untuk trigger auto-add flow',
+                usage: 'Ketik "add" atau "Add" di grup',
+                steps: [
+                    '1. User ketik "add" di grup',
+                    '2. Bot cek apakah sudah join channel',
+                    '3. Jika belum → Minta join channel dulu',
+                    '4. Jika sudah → Pilih role (Premium/Reseller/Owner)',
+                    '5. Pilih grup untuk aktivasi',
+                    '6. User otomatis di-add ke role yang dipilih'
+                ],
+                access: 'Semua'
+            }
+        }
+    },
+
     // === OTHER ===
     other: {
         category: '📌 Lainnya',
@@ -658,25 +735,26 @@ module.exports = (bot) => {
             inline_keyboard: [
                 [
                     { text: '🖥️ Panel', callback_data: 'help_panel' },
-                    { text: '📦 Mgmt', callback_data: 'help_panelmgmt' }, // New
-                    { text: '🎮 RPG', callback_data: 'help_rpg' }        // New
+                    { text: '📦 Mgmt', callback_data: 'help_panelmgmt' },
+                    { text: '🎮 RPG', callback_data: 'help_rpg' }
                 ],
                 [
                     { text: '⚙️ Server', callback_data: 'help_server' },
                     { text: '☁️ VPS', callback_data: 'help_vps' },
-                    { text: '🤖 Auto', callback_data: 'help_automation' } // New
+                    { text: '🤖 Auto', callback_data: 'help_automation' }
                 ],
                 [
                     { text: '👥 Users', callback_data: 'help_user' },
-                    { text: '🔐 License', callback_data: 'help_license' }, // New
-                    { text: '🛡️ Guard', callback_data: 'help_guard' }
+                    { text: '🔗 Auto-Add', callback_data: 'help_autoadd' },
+                    { text: '🔐 License', callback_data: 'help_license' }
                 ],
                 [
+                    { text: '🛡️ Guard', callback_data: 'help_guard' },
                     { text: '📊 Monitor', callback_data: 'help_monitor' },
-                    { text: '🔄 Update', callback_data: 'help_update' },
-                    { text: '⚙️ Ops', callback_data: 'help_settings' }
+                    { text: '🔄 Update', callback_data: 'help_update' }
                 ],
                 [
+                    { text: '⚙️ Ops', callback_data: 'help_settings' },
                     { text: '📌 Others', callback_data: 'help_other' },
                     { text: '❌ Tutup', callback_data: 'closemenu' }
                 ]

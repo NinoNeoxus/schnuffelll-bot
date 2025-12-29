@@ -535,7 +535,10 @@ ${ownerSettings.menuCaption || "🔽 _Klik tombol dibawah untuk membuka menu:_"}
               { text: "⚔️ RPG GAME", callback_data: "rpgmenu" }
             ],
             [
-              { text: "👑 OWNER MENU", callback_data: "ownermenu" },
+              { text: "🔗 AUTO-ADD", callback_data: "autoaddmenu" },
+              { text: "👑 OWNER MENU", callback_data: "ownermenu" }
+            ],
+            [
               { text: "⚙️ PENGATURAN", callback_data: "pengaturanbot" }
             ],
             [
@@ -1381,6 +1384,76 @@ _Ketik command di atas untuk mengubah pengaturan_
             [
               { text: "🔙 KEMBALI", callback_data: "openmainmenu" },
               { text: "👑 OWNER MENU", callback_data: "ownermenu" }
+            ]
+          ],
+        },
+      });
+    }
+  });
+
+  // Auto-Add Menu Callback
+  bot.on("callback_query", (callbackQuery) => {
+    if (callbackQuery.data === "autoaddmenu") {
+      bot.answerCallbackQuery(callbackQuery.id);
+      const text = `
+╔══════════════════════════════════╗
+║  🔗 <b>AUTO-ADD SYSTEM v8.11</b>  ║
+╠══════════════════════════════════╣
+║  Auto-Add dengan Join Channel   ║
+╚══════════════════════════════════╝
+
+<blockquote expandable>
+┌─「 📋 <b>CARA PAKAI</b> 」
+│
+│ 1️⃣ User ketik "add" di grup
+│ 2️⃣ Bot cek apakah user sudah join channel
+│ 3️⃣ Jika belum → Minta join channel dulu
+│ 4️⃣ Jika sudah → Pilih role (Premium/Reseller/Owner)
+│ 5️⃣ Pilih grup untuk aktivasi
+│ 6️⃣ User otomatis di-add ke role yang dipilih
+└───────────────────────
+</blockquote>
+
+┌─「 ⚙️ <b>SETUP (OWNER ONLY)</b> 」
+│
+│ /setpaneltype public
+│   └ Set grup sebagai panel public
+│
+│ /setpermission join_channel
+│   └ Set wajib join channel
+│
+│ /setchannel @channel_username
+│   └ Set channel yang wajib di-join
+│
+│ /setautoadd premium|reseller|owner
+│   └ Set role default (opsional)
+│
+│ /autoaddinfo
+│   └ Lihat konfigurasi saat ini
+│
+│ /autoaddoff
+│   └ Nonaktifkan auto-add
+└───────────────────────
+
+┌─「 👥 <b>USER COMMANDS</b> 」
+│
+│ Ketik "add" di grup
+│   └ Trigger auto-add flow
+│
+│ /daftar
+│   └ Daftar manual (jika auto-add aktif)
+└───────────────────────
+
+<i>💡 Bot harus jadi admin di channel untuk cek membership!</i>
+`;
+      bot.editMessageText(text, {
+        chat_id: callbackQuery.message.chat.id,
+        message_id: callbackQuery.message.message_id,
+        parse_mode: "HTML",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: "⬅️ KEMBALI", callback_data: "openmainmenu" }
             ]
           ],
         },
