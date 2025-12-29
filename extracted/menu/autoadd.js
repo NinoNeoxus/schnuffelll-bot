@@ -1,23 +1,24 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════════════════════
- *  🔗 SCHNUFFELLL BOT - AUTO-ADD CHANNEL MEMBERSHIP v8.1
- *  Auto-add users to Premium/Reseller when they join required channel
+ *  🔗 SCHNUFFELLL BOT - AUTO-ADD CHANNEL MEMBERSHIP v8.2
+ *  Auto-add users to Premium/Reseller/Owner when they join required channel
  *  
  *  Flow:
- *  1. User tries to use command in configured group
- *  2. Bot checks if user is in database
- *  3. If not: Check channel membership
- *  4. If not member: Show "Join Channel First" with inline buttons
- *  5. If member: Auto-add to role (Premium/Reseller) based on group config
+ *  1. User says "add" in group → Bot checks channel membership
+ *  2. If not member: Show "Join Channel First" with inline buttons
+ *  3. If member: Show role selection (addpr, address, addowner)
+ *  4. After role selected: Show group selection (groups where bot is member)
+ *  5. Auto-add user to selected role in selected group
  *  
  *  Commands (Owner Only):
  *  /setautoadd <role>       - Set auto-add role for current group
  *  /setchannel <@channel>   - Set required channel
+ *  /setpermission <type>    - Set permission type (join_channel)
  *  /autoaddinfo             - Show current auto-add settings
  *  /autoaddoff              - Disable auto-add for group
  *  
  *  @author @schnuffelll
- *  @version 8.1
+ *  @version 8.2
  * ═══════════════════════════════════════════════════════════════════════════════════════
  */
 
@@ -28,7 +29,7 @@ const settings = require('../config.js');
 
 module.exports = (bot) => {
 
-    console.log('[AUTOADD] 🔗 Auto-Add Channel Membership v8.1 loaded');
+    console.log('[AUTOADD] 🔗 Auto-Add Channel Membership v8.2 loaded');
 
     const OWNER_FILE = './db/users/adminID.json';
     const PREMIUM_FILE = './db/users/premiumUsers.json';
@@ -39,6 +40,10 @@ module.exports = (bot) => {
     if (!fs.existsSync(AUTOADD_FILE)) {
         saveJsonData(AUTOADD_FILE, { groups: {} });
     }
+
+    // Track processed users to prevent spam (userId -> timestamp)
+    const processedUsers = new Map();
+    const PROCESS_COOLDOWN = 5 * 60 * 1000; // 5 menit cooldown
 
     // Helper: Check if user is owner
     function isOwner(userId) {
@@ -321,9 +326,386 @@ Setelah terverifikasi, kamu akan otomatis terdaftar!`, {
     // ═══════════════════════════════════════════════════════════════════════════════
     // Callback: Verify channel membership
     // ═══════════════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════════════════
+    // Helper: Get all groups where bot is member
+    // ═══════════════════════════════════════════════════════════════════════════════════
+    async function getBotGroups() {
+        const config = loadJsonData(AUTOADD_FILE);
+        const groups = [];
+        
+        for (const [groupId, groupConfig] of Object.entries(config.groups || {})) {
+            if (groupConfig.enabled && groupConfig.channel) {
+                try {
+                    const chat = await bot.getChat(groupId);
+                    groups.push({
+                        id: groupId,
+                        title: chat.title,
+                        config: groupConfig
+                    });
+                } catch (e) {
+                    // Skip groups bot can't access
+                }
+            }
+        }
+        
+        return groups;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════
+    // Helper: Check if user already joined channel AND has role (anti-spam)
+    // ═══════════════════════════════════════════════════════════════════════════════════
+    async function isUserAlreadyProcessed(userId, groupConfig) {
+        if (!groupConfig || !groupConfig.channel) return false;
+        
+        const isMember = await isChannelMember(userId, groupConfig.channel);
+        const hasAnyRole = hasRole(userId, 'premium') || hasRole(userId, 'reseller') || hasRole(userId, 'owner');
+        
+        return isMember && hasAnyRole;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════
+    // /setpermission <type> - Set permission type (join_channel)
+    // ═══════════════════════════════════════════════════════════════════════════════════
+    bot.onText(/^\/setpermission\s+(join_channel|none)$/i, async (msg, match) => {
+        const chatId = msg.chat.id;
+        const userId = msg.from.id.toString();
+
+        if (msg.chat.type === 'private') {
+            return bot.sendMessage(chatId, '❌ Command ini hanya untuk grup!');
+        }
+
+        if (!isOwner(userId)) {
+            return bot.sendMessage(chatId, '❌ ᴋʜᴜꜱᴜꜱ ᴏᴡɴᴇʀ!');
+        }
+
+        const permissionType = match[1].toLowerCase();
+        const config = loadJsonData(AUTOADD_FILE);
+
+        if (!config.groups[chatId]) {
+            config.groups[chatId] = {};
+        }
+
+        config.groups[chatId].permissionType = permissionType;
+        saveJsonData(AUTOADD_FILE, config);
+
+        if (permissionType === 'join_channel') {
+            bot.sendMessage(chatId, `✅ <b>Permission Type Set!</b>
+
+🔐 <b>Type:</b> Wajib Join Channel
+
+⚠️ Sekarang set channel dengan:
+<code>/setchannel @channel_username</code>
+
+Lalu add bot ke channel dan jadiin admin!`, { parse_mode: 'HTML' });
+        } else {
+            bot.sendMessage(chatId, `✅ <b>Permission Type Set!</b>
+
+🔓 <b>Type:</b> None (No requirement)`, { parse_mode: 'HTML' });
+        }
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════════════════
+    // Detect kata "add" di grup dan trigger auto-add flow
+    // ═══════════════════════════════════════════════════════════════════════════════════
+    bot.on('message', async (msg) => {
+        // Skip private chat, commands, and non-text messages
+        if (msg.chat.type === 'private') return;
+        if (msg.text?.startsWith('/')) return;
+        if (!msg.text) return;
+
+        const text = msg.text.toLowerCase().trim();
+        
+        // Check if message contains "add" (case insensitive)
+        if (!text.includes('add')) return;
+
+        const chatId = msg.chat.id;
+        const userId = msg.from.id;
+        const userName = msg.from.first_name || 'User';
+
+        const config = loadJsonData(AUTOADD_FILE);
+        const groupConfig = config.groups[chatId];
+
+        // Check if auto-add is configured and enabled
+        if (!groupConfig || !groupConfig.enabled) return;
+
+        // Check permission type
+        if (groupConfig.permissionType !== 'join_channel') return;
+
+        // Check if channel is set
+        if (!groupConfig.channel) return;
+
+        // Anti-spam: Check if user already processed recently
+        const userKey = `${userId}_${chatId}`;
+        const lastProcessed = processedUsers.get(userKey);
+        if (lastProcessed && Date.now() - lastProcessed < PROCESS_COOLDOWN) {
+            return; // Skip, user was processed recently
+        }
+
+        // Check if user already joined channel AND has role (anti-spam)
+        const alreadyProcessed = await isUserAlreadyProcessed(userId, groupConfig);
+        if (alreadyProcessed) {
+            processedUsers.set(userKey, Date.now());
+            return; // Don't reply, user already has access
+        }
+
+        // Check channel membership
+        const isMember = await isChannelMember(userId, groupConfig.channel);
+
+        if (!isMember) {
+            // Not a member - show join button
+            const channelLink = groupConfig.channel.startsWith('@')
+                ? `https://t.me/${groupConfig.channel.replace('@', '')}`
+                : `https://t.me/c/${groupConfig.channel.replace('-100', '')}`;
+
+            const keyboard = {
+                inline_keyboard: [
+                    [
+                        { text: '📢 Join Channel', url: channelLink }
+                    ],
+                    [
+                        { text: '✅ Sudah Join', callback_data: `autoadd_join_${chatId}_${userId}` }
+                    ]
+                ]
+            };
+
+            bot.sendMessage(chatId, `⚠️ <b>${userName}, kamu belum join channel!</b>
+
+Untuk menggunakan fitur bot, kamu harus:
+
+1️⃣ Join channel: <b>${groupConfig.channelTitle || groupConfig.channel}</b>
+2️⃣ Klik tombol "Sudah Join" di bawah
+
+Setelah terverifikasi, kamu bisa pilih role yang diinginkan!`, {
+                parse_mode: 'HTML',
+                reply_to_message_id: msg.message_id,
+                reply_markup: keyboard
+            });
+            
+            processedUsers.set(userKey, Date.now());
+            return;
+        }
+
+        // User is member - show role selection
+        const keyboard = {
+            inline_keyboard: [
+                [
+                    { text: '⭐ Add Premium', callback_data: `autoadd_role_${chatId}_${userId}_premium` },
+                    { text: '🏪 Add Reseller', callback_data: `autoadd_role_${chatId}_${userId}_reseller` }
+                ],
+                [
+                    { text: '👑 Add Owner', callback_data: `autoadd_role_${chatId}_${userId}_owner` }
+                ]
+            ]
+        };
+
+        bot.sendMessage(chatId, `✅ <b>${userName}, kamu sudah join channel!</b>
+
+Pilih role yang ingin kamu dapatkan:
+
+⭐ <b>Premium</b> - Akses fitur premium
+🏪 <b>Reseller</b> - Akses fitur reseller  
+👑 <b>Owner</b> - Akses fitur owner
+
+Setelah pilih role, kamu akan diminta pilih grup untuk aktivasi.`, {
+            parse_mode: 'HTML',
+            reply_to_message_id: msg.message_id,
+            reply_markup: keyboard
+        });
+
+        processedUsers.set(userKey, Date.now());
+    });
+
     bot.on('callback_query', async (query) => {
         const data = query.data;
 
+        // Handle "Sudah Join" button
+        if (data.startsWith('autoadd_join_')) {
+            const parts = data.replace('autoadd_join_', '').split('_');
+            const groupId = parts[0];
+            const userId = parseInt(parts[1]);
+
+            if (query.from.id !== userId) {
+                return bot.answerCallbackQuery(query.id, {
+                    text: '❌ Bukan pesan kamu!',
+                    show_alert: true
+                });
+            }
+
+            const config = loadJsonData(AUTOADD_FILE);
+            const groupConfig = config.groups[groupId];
+
+            if (!groupConfig || !groupConfig.enabled) {
+                return bot.answerCallbackQuery(query.id, {
+                    text: '❌ Auto-add tidak aktif',
+                    show_alert: true
+                });
+            }
+
+            // Verify channel membership
+            const isMember = await isChannelMember(userId, groupConfig.channel);
+
+            if (!isMember) {
+                return bot.answerCallbackQuery(query.id, {
+                    text: '❌ Kamu belum join channel! Join dulu ya.',
+                    show_alert: true
+                });
+            }
+
+            // Show role selection
+            const keyboard = {
+                inline_keyboard: [
+                    [
+                        { text: '⭐ Add Premium', callback_data: `autoadd_role_${groupId}_${userId}_premium` },
+                        { text: '🏪 Add Reseller', callback_data: `autoadd_role_${groupId}_${userId}_reseller` }
+                    ],
+                    [
+                        { text: '👑 Add Owner', callback_data: `autoadd_role_${groupId}_${userId}_owner` }
+                    ]
+                ]
+            };
+
+            bot.answerCallbackQuery(query.id, {
+                text: '✅ Verifikasi berhasil! Pilih role sekarang.',
+                show_alert: false
+            });
+
+            bot.editMessageText(`✅ <b>${query.from.first_name}, kamu sudah join channel!</b>
+
+Pilih role yang ingin kamu dapatkan:
+
+⭐ <b>Premium</b> - Akses fitur premium
+🏪 <b>Reseller</b> - Akses fitur reseller  
+👑 <b>Owner</b> - Akses fitur owner
+
+Setelah pilih role, kamu akan diminta pilih grup untuk aktivasi.`, {
+                chat_id: query.message.chat.id,
+                message_id: query.message.message_id,
+                parse_mode: 'HTML',
+                reply_markup: keyboard
+            });
+            return;
+        }
+
+        // Handle role selection
+        if (data.startsWith('autoadd_role_')) {
+            const parts = data.replace('autoadd_role_', '').split('_');
+            const groupId = parts[0];
+            const userId = parseInt(parts[1]);
+            const role = parts[2];
+
+            if (query.from.id !== userId) {
+                return bot.answerCallbackQuery(query.id, {
+                    text: '❌ Bukan pesan kamu!',
+                    show_alert: true
+                });
+            }
+
+            // Get all groups where bot is member
+            const groups = await getBotGroups();
+
+            if (groups.length === 0) {
+                return bot.answerCallbackQuery(query.id, {
+                    text: '❌ Tidak ada grup yang tersedia',
+                    show_alert: true
+                });
+            }
+
+            // Create group selection keyboard
+            const keyboard = {
+                inline_keyboard: groups.slice(0, 10).map(group => [
+                    { text: group.title, callback_data: `autoadd_final_${groupId}_${userId}_${role}_${group.id}` }
+                ])
+            };
+
+            const roleEmoji = { premium: '⭐', reseller: '🏪', owner: '👑' };
+
+            bot.answerCallbackQuery(query.id, {
+                text: `Pilih grup untuk aktivasi ${roleEmoji[role]} ${role.toUpperCase()}`,
+                show_alert: false
+            });
+
+            bot.editMessageText(`✅ <b>Role Dipilih: ${roleEmoji[role]} ${role.toUpperCase()}</b>
+
+Pilih grup di mana kamu ingin diaktifkan:
+
+${groups.slice(0, 10).map((g, i) => `${i + 1}. ${g.title}`).join('\n')}`, {
+                chat_id: query.message.chat.id,
+                message_id: query.message.message_id,
+                parse_mode: 'HTML',
+                reply_markup: keyboard
+            });
+            return;
+        }
+
+        // Handle final group selection and add user
+        if (data.startsWith('autoadd_final_')) {
+            const parts = data.replace('autoadd_final_', '').split('_');
+            const originalGroupId = parts[0];
+            const userId = parseInt(parts[1]);
+            const role = parts[2];
+            const targetGroupId = parts.slice(3).join('_'); // Handle negative IDs
+
+            if (query.from.id !== userId) {
+                return bot.answerCallbackQuery(query.id, {
+                    text: '❌ Bukan pesan kamu!',
+                    show_alert: true
+                });
+            }
+
+            // Add user to role
+            const added = addUserToRole(userId, role);
+
+            if (added) {
+                const roleEmoji = { premium: '⭐', reseller: '🏪', owner: '👑' };
+
+                bot.answerCallbackQuery(query.id, {
+                    text: `🎉 Berhasil! Kamu sekarang ${roleEmoji[role]} ${role.toUpperCase()}!`,
+                    show_alert: true
+                });
+
+                // Get target group info
+                let targetGroupTitle = 'Grup';
+                try {
+                    const targetChat = await bot.getChat(targetGroupId);
+                    targetGroupTitle = targetChat.title;
+                } catch (e) {
+                    // Ignore
+                }
+
+                bot.editMessageText(`🎉 <b>BERHASIL DITAMBAHKAN!</b>
+
+✅ <b>${query.from.first_name}</b> berhasil ditambahkan sebagai ${roleEmoji[role]} <b>${role.toUpperCase()}</b>!
+
+📍 <b>Grup:</b> ${targetGroupTitle}
+
+Selamat menggunakan bot!`, {
+                    chat_id: query.message.chat.id,
+                    message_id: query.message.message_id,
+                    parse_mode: 'HTML'
+                });
+
+                // Send notification to target group
+                try {
+                    bot.sendMessage(targetGroupId, `🎉 <b>User Baru Ditambahkan!</b>
+
+👤 <b>User:</b> ${query.from.first_name} ${query.from.username ? `(@${query.from.username})` : ''}
+🆔 <b>ID:</b> <code>${userId}</code>
+${roleEmoji[role]} <b>Role:</b> ${role.toUpperCase()}`, {
+                        parse_mode: 'HTML'
+                    });
+                } catch (e) {
+                    // Ignore if can't send to target group
+                }
+            } else {
+                bot.answerCallbackQuery(query.id, {
+                    text: `⚠️ Kamu sudah menjadi ${role.toUpperCase()}!`,
+                    show_alert: true
+                });
+            }
+            return;
+        }
+
+        // Handle existing autoadd_verify callback (keep for backward compatibility)
         if (!data.startsWith('autoadd_verify_')) return;
 
         const userId = query.from.id;
