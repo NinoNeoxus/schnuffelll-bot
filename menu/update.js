@@ -80,22 +80,30 @@ module.exports = (bot) => {
         }
     }
 
-    // Compare versions (handle beta/alpha suffixes by stripping them)
+    // BULLETPROOF VERSION CHECK - Checks version, build, AND date
+    // If ANY of these is different/newer = UPDATE AVAILABLE
     function isNewerVersion(local, remote) {
+        console.log('[UPDATE] ═══════════════════════════════════════════');
+        console.log('[UPDATE] BULLETPROOF UPDATE CHECK');
+
+        // If no local version, definitely need update
         if (!local || !local.version) {
-            console.error('[UPDATE] Local version data missing');
-            return false;
+            console.log('[UPDATE] ✓ No local version - UPDATE NEEDED');
+            return true;
         }
+
+        // If no remote version data, can't check
         if (!remote || !remote.version) {
-            console.error('[UPDATE] Remote version data missing');
+            console.error('[UPDATE] ✗ Remote version data missing');
             return false;
         }
 
-        // Remove -beta, -alpha, etc. for comparison
+        console.log(`[UPDATE] Local:  v${local.version} | build ${local.build} | ${local.releaseDate}`);
+        console.log(`[UPDATE] Remote: v${remote.version} | build ${remote.build} | ${remote.releaseDate}`);
+
+        // CHECK 1: Version number comparison
         const cleanLocal = (local.version || "0.0.0").replace(/-.*/, '');
         const cleanRemote = (remote.version || "0.0.0").replace(/-.*/, '');
-
-        console.log(`[UPDATE] Comparing: Local '${cleanLocal}' vs Remote '${cleanRemote}'`);
 
         const localParts = cleanLocal.split('.').map(Number);
         const remoteParts = cleanRemote.split('.').map(Number);
@@ -103,16 +111,44 @@ module.exports = (bot) => {
         for (let i = 0; i < Math.max(localParts.length, remoteParts.length); i++) {
             const l = localParts[i] || 0;
             const r = remoteParts[i] || 0;
-            if (r > l) return true;
-            if (r < l) return false;
+            if (r > l) {
+                console.log(`[UPDATE] ✓ Version higher: ${cleanRemote} > ${cleanLocal}`);
+                return true;
+            }
+            if (r < l) {
+                // Remote is older? Still check build/date in case of rollback fix
+                break;
+            }
         }
 
-        // Check build number if versions match
-        if (remote.build && local.build && parseInt(remote.build) > parseInt(local.build)) {
-            console.log(`[UPDATE] Build mismatch: Local ${local.build} < Remote ${remote.build}`);
+        // CHECK 2: Build number comparison
+        const localBuild = parseInt(local.build) || 0;
+        const remoteBuild = parseInt(remote.build) || 0;
+
+        if (remoteBuild > localBuild) {
+            console.log(`[UPDATE] ✓ Build higher: ${remoteBuild} > ${localBuild}`);
             return true;
         }
 
+        // CHECK 3: Release date comparison (if builds are same, check date)
+        if (remote.releaseDate && local.releaseDate) {
+            const localDate = new Date(local.releaseDate).getTime();
+            const remoteDate = new Date(remote.releaseDate).getTime();
+
+            if (remoteDate > localDate) {
+                console.log(`[UPDATE] ✓ Date newer: ${remote.releaseDate} > ${local.releaseDate}`);
+                return true;
+            }
+        }
+
+        // CHECK 4: If versions are EXACTLY same but build is different (hotfix)
+        if (cleanLocal === cleanRemote && localBuild !== remoteBuild && remoteBuild > 0) {
+            console.log(`[UPDATE] ✓ Same version but different build (hotfix)`);
+            return true;
+        }
+
+        console.log('[UPDATE] ✗ Already up to date');
+        console.log('[UPDATE] ═══════════════════════════════════════════');
         return false;
     }
 
