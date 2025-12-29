@@ -3143,10 +3143,30 @@ ${safeLines}`;
             }, 500);
           }
 
+          // Detect when script asks for reboot
+          // Script reinstall biasanya output: "Please type 'reboot'" atau "Run: reboot" atau "type reboot"
+          if ((out.toLowerCase().includes('type reboot') || 
+               out.toLowerCase().includes('run: reboot') || 
+               out.toLowerCase().includes('please reboot') ||
+               out.toLowerCase().includes('reboot to start') ||
+               out.toLowerCase().includes('run `reboot`') ||
+               out.toLowerCase().includes("run 'reboot'")) && !rebootDetected) {
+            updateLog('Script minta reboot, mengirim command reboot...', 'sending_reboot');
+            setTimeout(() => {
+              stream.write('reboot\n');
+            }, 1000);
+          }
+
           // Detect reboot message
           if (out.includes('tail -fn+1 /reinstall.log') || out.includes('To view logs run')) {
             updateLog('VPS akan reboot, tunggu 2 menit...', 'rebooting');
             rebootDetected = true;
+
+            // Kirim reboot dulu sebelum disconnect
+            setTimeout(() => {
+              stream.write('reboot\n');
+              updateLog('Command reboot dikirim!', 'rebooting');
+            }, 500);
 
             // Wait 2 minutes then try to reconnect and stream logs
             setTimeout(() => {

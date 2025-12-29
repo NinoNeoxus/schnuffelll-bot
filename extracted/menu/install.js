@@ -1601,21 +1601,70 @@ Silahkan tunggu 10-20 menit...
           stream.stderr.on("data", (data) => updateLogs("CONFIG ERR: " + data.toString().trim()));
 
           stream.on("close", () => {
-            updateLogs("🔄 Konfigurasi selesai, mencoba menjalankan wings...");
-            conn.exec("systemctl restart wings", (err2, stream2) => {
-              if (err2) {
-                updateLogs("❌ Gagal menjalankan systemctl restart wings: " + err2.message);
-                conn.end();
-                return;
+            updateLogs("🔄 Konfigurasi selesai...");
+            
+            // Extract node domain dari config untuk generate SSL
+            updateLogs("🔐 Mengecek & generate SSL certificate...");
+            const sslCheckCmd = `
+              # Stop nginx/apache sementara untuk port 80
+              systemctl stop nginx 2>/dev/null || true
+              systemctl stop apache2 2>/dev/null || true
+              
+              # Get node domain dari wings config
+              NODE_DOMAIN=$(grep -oP '(?<=remote: )https://[^/]+' /etc/pterodactyl/config.yml 2>/dev/null | sed 's|https://||' || echo "")
+              
+              # Jika tidak dapat dari config, coba dari api host
+              if [ -z "$NODE_DOMAIN" ]; then
+                NODE_DOMAIN=$(grep -oP '(?<=host: )[^:]+' /etc/pterodactyl/config.yml 2>/dev/null | head -1 || echo "")
+              fi
+              
+              # Check jika cert sudah ada
+              if [ -d "/etc/letsencrypt/live/$NODE_DOMAIN" ] && [ -f "/etc/letsencrypt/live/$NODE_DOMAIN/fullchain.pem" ]; then
+                echo "SSL_EXISTS: Certificate sudah ada untuk $NODE_DOMAIN"
+              else
+                echo "SSL_GENERATE: Generating SSL untuk domain..."
+                # Install certbot jika belum ada
+                apt-get update -qq && apt-get install -y certbot -qq 2>/dev/null || true
+                
+                # Generate SSL certificate dengan standalone mode
+                certbot certonly --standalone --non-interactive --agree-tos --register-unsafely-without-email -d "$NODE_DOMAIN" 2>&1 || echo "CERTBOT_FAILED"
+              fi
+              
+              # Restart nginx/apache
+              systemctl start nginx 2>/dev/null || true
+              systemctl start apache2 2>/dev/null || true
+            `;
+            
+            conn.exec(sslCheckCmd, (errSSL, streamSSL) => {
+              if (errSSL) {
+                updateLogs("⚠️ Gagal cek SSL: " + errSSL.message + " - Lanjut restart wings...");
               }
+              
+              if (streamSSL) {
+                streamSSL.stdout.on("data", (data) => updateLogs("SSL: " + data.toString().trim()));
+                streamSSL.stderr.on("data", (data) => updateLogs("SSL ERR: " + data.toString().trim()));
+              }
+              
+              // Tunggu sebentar lalu restart wings
+              setTimeout(() => {
+                updateLogs("🔄 Mencoba menjalankan wings...");
+                conn.exec("systemctl restart wings", (err2, stream2) => {
+                  if (err2) {
+                    updateLogs("❌ Gagal menjalankan systemctl restart wings: " + err2.message);
+                    conn.end();
+                    return;
+                  }
 
-              stream2.stdout.on("data", (data) => updateLogs("WINGS OUT: " + data.toString().trim()));
-              stream2.stderr.on("data", (data) => updateLogs("WINGS ERR: " + data.toString().trim()));
+                  stream2.stdout.on("data", (data) => updateLogs("WINGS OUT: " + data.toString().trim()));
+                  stream2.stderr.on("data", (data) => updateLogs("WINGS ERR: " + data.toString().trim()));
 
-              stream2.on("close", () => {
-                updateLogs("✅ Wings berhasil dijalankan! Jika node masih merah, coba /debug untuk sudo wings --debug.");
-                conn.end();
-              });
+                  stream2.on("close", () => {
+                    updateLogs("✅ Wings berhasil dijalankan!");
+                    updateLogs("💡 Jika node masih merah, coba /debug atau /gencert untuk generate SSL manual.");
+                    conn.end();
+                  });
+                });
+              }, 3000);
             });
           });
         });
@@ -1715,6 +1764,171 @@ Silahkan tunggu 10-20 menit...
         stream.on('close', () => {
           updateLogs('✅ Perintah debug selesai. Silakan cek log di atas dan refresh panel.');
           conn.end();
+        });
+      });
+    })
+      .on('error', (err) => {
+        updateLogs('❌ Connection Error: ' + err.message);
+      })
+      .on('end', () => {
+        updateLogs('🔌 SSH Connection closed');
+      })
+      .connect(connSettings);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // COMMAND /gencert - Generate SSL Certificate untuk Node Wings
+  // Mengatasi error: failed to configure HTTPS server
+  // ═══════════════════════════════════════════════════════════════
+  const gencertStates = {};
+
+  bot.onText(/^\/gencert(?:\s+(.+))?$/i, async (msg, match) => {
+    const chatId = msg.chat.id;
+
+    const owners = loadJsonData(OWNER_FILE);
+    if (!owners.includes(msg.from.id.toString())) {
+      return bot.sendMessage(chatId, '❌ ᴋʜᴜꜱᴜꜱ ᴏᴡɴᴇʀ!');
+    }
+
+    const text = match[1];
+
+    // mode langsung: /gencert ip,pw,nodedomain
+    if (text) {
+      const parts = text.split(/[|,]/).map(x => x.trim()).filter(Boolean);
+      if (parts.length < 3) {
+        return bot.sendMessage(chatId, '❌ Format salah!\nContoh:\n/gencert ipvps,pwvps,node-domain.com', { parse_mode: 'Markdown' });
+      }
+      const ipvps = parts[0];
+      const passwd = parts[1];
+      const nodeDomain = parts[2];
+      return runGenCert(bot, chatId, ipvps, passwd, nodeDomain);
+    }
+
+    // mode interaktif
+    gencertStates[chatId] = { step: 'ip', data: {}, userId: msg.from.id };
+    return bot.sendMessage(chatId, '📌 ᴍᴀꜱᴜᴋᴋᴀɴ ɪᴘ ᴠᴘꜱ:');
+  });
+
+  // handler message untuk state gencert
+  bot.on('message', async (msg) => {
+    const chatId = msg.chat.id;
+    const text = (msg.text || '').trim();
+    if (!text || text.startsWith('/')) return;
+
+    const state = gencertStates[chatId];
+    if (!state) return;
+
+    switch (state.step) {
+      case 'ip':
+        state.data.ipvps = text;
+        state.step = 'pass';
+        return bot.sendMessage(chatId, '🔑 ᴍᴀꜱᴜᴋᴋᴀɴ ᴘᴀꜱꜱᴡᴏʀᴅ ᴠᴘꜱ:');
+      case 'pass':
+        state.data.passwd = text;
+        state.step = 'domain';
+        return bot.sendMessage(chatId, '🌐 ᴍᴀꜱᴜᴋᴋᴀɴ ᴅᴏᴍᴀɪɴ ɴᴏᴅᴇ (contoh: node-tirex.schnuffelll.shop):');
+      case 'domain':
+        const ipvps = state.data.ipvps;
+        const passwd = state.data.passwd;
+        const nodeDomain = text;
+        delete gencertStates[chatId];
+        return runGenCert(bot, chatId, ipvps, passwd, nodeDomain);
+      default:
+        delete gencertStates[chatId];
+        return;
+    }
+  });
+
+  async function runGenCert(bot, chatId, ipvps, passwd, nodeDomain) {
+    let logs = '🔐 Generate SSL Certificate untuk: ' + nodeDomain + '\n\n';
+    const loadingMsg = await bot.sendMessage(chatId, '```\n' + logs + '\n```', { parse_mode: 'Markdown' });
+
+    const connSettings = {
+      host: ipvps,
+      port: 22,
+      username: 'root',
+      password: passwd,
+      readyTimeout: 20000
+    };
+
+    const conn = new Client();
+
+    function updateLogs(newLine) {
+      logs += newLine + '\n';
+      const sliced = logs.slice(-3500);
+      safeEdit(bot, chatId, loadingMsg.message_id, '```\n' + sliced + '\n```');
+    }
+
+    conn.on('ready', () => {
+      updateLogs('✅ SSH Connected!');
+      updateLogs('🛑 Menghentikan nginx/apache untuk free port 80...');
+      
+      // Command untuk generate SSL
+      const genCertCmd = `
+        # Stop services yang pakai port 80
+        systemctl stop nginx 2>/dev/null || true
+        systemctl stop apache2 2>/dev/null || true
+        systemctl stop wings 2>/dev/null || true
+        
+        # Kill proses di port 80 jika masih ada
+        fuser -k 80/tcp 2>/dev/null || true
+        sleep 2
+        
+        # Install certbot jika belum ada
+        echo "📦 Installing certbot..."
+        apt-get update -qq
+        apt-get install -y certbot -qq
+        
+        # Hapus cert lama jika ada (untuk renewal)
+        certbot delete --cert-name ${nodeDomain} --non-interactive 2>/dev/null || true
+        
+        # Generate SSL certificate
+        echo "🔐 Generating SSL certificate for ${nodeDomain}..."
+        certbot certonly --standalone --non-interactive --agree-tos --register-unsafely-without-email -d ${nodeDomain}
+        
+        # Check hasil
+        if [ -f "/etc/letsencrypt/live/${nodeDomain}/fullchain.pem" ]; then
+          echo "✅ SSL Certificate berhasil digenerate!"
+          echo "📄 Cert path: /etc/letsencrypt/live/${nodeDomain}/fullchain.pem"
+          echo "🔑 Key path: /etc/letsencrypt/live/${nodeDomain}/privkey.pem"
+        else
+          echo "❌ SSL Certificate gagal digenerate!"
+          echo "Coba cek DNS apakah domain ${nodeDomain} sudah pointing ke IP ini"
+        fi
+        
+        # Restart services
+        systemctl start nginx 2>/dev/null || true
+        systemctl start apache2 2>/dev/null || true
+      `;
+      
+      conn.exec(genCertCmd, (err, stream) => {
+        if (err) {
+          updateLogs('❌ Gagal menjalankan command: ' + err.message);
+          conn.end();
+          return;
+        }
+
+        stream.stdout.on('data', (data) => updateLogs(data.toString().trim()));
+        stream.stderr.on('data', (data) => updateLogs('ERR: ' + data.toString().trim()));
+
+        stream.on('close', () => {
+          updateLogs('\n🔄 Mencoba restart Wings...');
+          conn.exec('systemctl restart wings && sleep 2 && systemctl status wings | head -20', (err2, stream2) => {
+            if (err2) {
+              updateLogs('❌ Gagal restart wings: ' + err2.message);
+              conn.end();
+              return;
+            }
+            
+            stream2.stdout.on('data', (data) => updateLogs(data.toString().trim()));
+            stream2.stderr.on('data', (data) => updateLogs('ERR: ' + data.toString().trim()));
+            
+            stream2.on('close', () => {
+              updateLogs('\n✅ Proses selesai!');
+              updateLogs('💡 Jika masih error, coba /debug untuk melihat log wings.');
+              conn.end();
+            });
+          });
         });
       });
     })
@@ -2929,10 +3143,30 @@ ${safeLines}`;
             }, 500);
           }
 
+          // Detect when script asks for reboot
+          // Script reinstall biasanya output: "Please type 'reboot'" atau "Run: reboot" atau "type reboot"
+          if ((out.toLowerCase().includes('type reboot') || 
+               out.toLowerCase().includes('run: reboot') || 
+               out.toLowerCase().includes('please reboot') ||
+               out.toLowerCase().includes('reboot to start') ||
+               out.toLowerCase().includes('run `reboot`') ||
+               out.toLowerCase().includes("run 'reboot'")) && !rebootDetected) {
+            updateLog('Script minta reboot, mengirim command reboot...', 'sending_reboot');
+            setTimeout(() => {
+              stream.write('reboot\n');
+            }, 1000);
+          }
+
           // Detect reboot message
           if (out.includes('tail -fn+1 /reinstall.log') || out.includes('To view logs run')) {
             updateLog('VPS akan reboot, tunggu 2 menit...', 'rebooting');
             rebootDetected = true;
+
+            // Kirim reboot dulu sebelum disconnect
+            setTimeout(() => {
+              stream.write('reboot\n');
+              updateLog('Command reboot dikirim!', 'rebooting');
+            }, 500);
 
             // Wait 2 minutes then try to reconnect and stream logs
             setTimeout(() => {
