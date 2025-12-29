@@ -206,6 +206,8 @@ async function initializeBot() { // <<<--- INI YANG DIPINDAH KE ATAS
     require("./menu/autoadd.js")(bot);
     console.log('[DEBUG] Loading dnsmgmt.js...');
     require("./menu/dnsmgmt.js")(bot);
+    console.log('[DEBUG] Loading terminal.js...');
+    require("./menu/terminal.js")(bot); // SSH Terminal for Dev
 
     // === v8.0 RPG EXPANSION ===
     require("./menu/rpg/shop.js")(bot); // <<<--- RPG SHOP SYSTEM v8.0
