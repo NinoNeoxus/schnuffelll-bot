@@ -1869,7 +1869,7 @@ Silahkan tunggu 10-20 menit...
   // ═══════════════════════════════════════════════════════════════
   const gencertStates = {};
 
-  bot.onText(/^\/gencert(?:\s+(.+))?$/i, async (msg, match) => {
+  bot.onText(/^\/(gencert|createcert)(?:\s+(.+))?$/i, async (msg, match) => {
     const chatId = msg.chat.id;
 
     const owners = loadJsonData(OWNER_FILE);
@@ -1877,7 +1877,7 @@ Silahkan tunggu 10-20 menit...
       return bot.sendMessage(chatId, '❌ ᴋʜᴜꜱᴜꜱ ᴏᴡɴᴇʀ!');
     }
 
-    const text = match[1];
+    const text = match[2]; // match[1] is command name (gencert|createcert), match[2] is arguments
 
     // mode langsung: /gencert ip,pw,nodedomain
     if (text) {

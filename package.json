@@ -1,6 +1,6 @@
 {
   "name": "schnuffellll-bot-tele",
-  "version": "8.9",
+  "version": "9.0",
   "description": "Schnuffellll bot for Controlling VPS with Panel Hosting",
   "main": "schnuffelll.js",
   "scripts": {
