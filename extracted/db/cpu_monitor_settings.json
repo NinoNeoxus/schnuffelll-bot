@@ -1,8 +1,0 @@
-{
-    "enabled": false,
-    "cpuLimit": 100,
-    "duration": 30,
-    "checkInterval": 300000,
-    "notifyGroupId": "-1003107203262",
-    "activePanel": "V1"
-}
