@@ -58,36 +58,59 @@ module.exports = (bot) => {
 
         switch (version) {
             case 'V2':
-                return { domain: panelSettings.domainV2, pltc: panelSettings.pltcV2 };
+                return { domain: panelSettings.domainV2, pltc: panelSettings.pltcV2, plta: panelSettings.pltaV2 };
             case 'V3':
-                return { domain: panelSettings.domainV3, pltc: panelSettings.pltcV3 };
+                return { domain: panelSettings.domainV3, pltc: panelSettings.pltcV3, plta: panelSettings.pltaV3 };
             case 'V4':
-                return { domain: panelSettings.domainV4, pltc: panelSettings.pltcV4 };
+                return { domain: panelSettings.domainV4, pltc: panelSettings.pltcV4, plta: panelSettings.pltaV4 };
             case 'V5':
-                return { domain: panelSettings.domainV5, pltc: panelSettings.pltcV5 };
+                return { domain: panelSettings.domainV5, pltc: panelSettings.pltcV5, plta: panelSettings.pltaV5 };
             default:
-                return { domain: panelSettings.domain, pltc: panelSettings.pltc };
+                return { domain: panelSettings.domain, pltc: panelSettings.pltc, plta: panelSettings.plta };
         }
     }
 
-    // Get all servers from panel
-    async function getAllServers(domain, pltc) {
+    // Get all servers from panel (USING APPLICATION API - PLTA)
+    async function getAllServers(domain, plta) {
+        if (!plta || plta === '-') {
+            console.log('[CPU Monitor] Missing PLTA (Application Key) - Cannot list all servers!');
+            return [];
+        }
+
         try {
-            const response = await axios.get(`${domain}/api/client`, {
-                headers: {
-                    'Authorization': `Bearer ${pltc}`,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            });
-            return response.data.data || [];
+            // Need to handle pagination
+            let allServers = [];
+            let page = 1;
+            let totalPages = 1;
+
+            console.log(`[CPU Monitor] Fetching server list from ${domain} via Application API...`);
+
+            do {
+                const response = await axios.get(`${domain}/api/application/servers?page=${page}`, {
+                    headers: {
+                        'Authorization': `Bearer ${plta}`,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = response.data;
+                allServers = allServers.concat(data.data);
+                totalPages = data.meta.pagination.total_pages;
+                page++;
+
+            } while (page <= totalPages);
+
+            console.log(`[CPU Monitor] Found ${allServers.length} total servers on panel.`);
+            return allServers;
         } catch (err) {
-            console.error('Error getting servers:', err.message);
+            console.error('[CPU Monitor] Error getting server list:', err.response?.status, err.message);
+            // Fallback: If 403, maybe PLTA is invalid.
             return [];
         }
     }
 
-    // Get server resources (CPU, RAM, etc)
+    // Get server resources (CPU, RAM, etc) (USING CLIENT API - PLTC)
     async function getServerResources(domain, pltc, serverId) {
         try {
             const response = await axios.get(`${domain}/api/client/servers/${serverId}/resources`, {
@@ -99,7 +122,8 @@ module.exports = (bot) => {
             });
             return response.data.attributes || null;
         } catch (err) {
-            console.error(`Error getting resources for ${serverId}:`, err.message);
+            // If 403/404, we don't have access to this server
+            // console.error(`Debug access error for ${serverId}:`, err.response?.status);
             return null;
         }
     }
@@ -164,27 +188,43 @@ module.exports = (bot) => {
 
         const credentials = getPanelCredentials(cpuSettings.activePanel);
 
-        if (!credentials.domain || !credentials.pltc || credentials.pltc === '-') {
-            console.log('[CPU Monitor] Panel credentials not configured');
+        if (!credentials.domain || !credentials.plta) {
+            console.log('[CPU Monitor] Config incomplete. PLTA (App Key) required to list servers.');
             return;
         }
 
         console.log(`[CPU Monitor] Checking servers on ${cpuSettings.activePanel}...`);
 
-        const servers = await getAllServers(credentials.domain, credentials.pltc);
+        // Use PLTA (App Key) to list ALL servers
+        const servers = await getAllServers(credentials.domain, credentials.plta);
+
+        if (servers.length === 0) {
+            console.log('[CPU Monitor] No servers found or Access Denied.');
+            return;
+        }
+
+        let accessDeniedCount = 0;
+        let checkedCount = 0;
 
         for (const server of servers) {
             const serverAttrs = server.attributes;
-            const serverId = serverAttrs.identifier;
+            const serverId = serverAttrs.identifier; // Short UUID for Client API
 
+            // Note: Application API returns 'identifier' as the short UUID used for Client API
+
+            // Try to get resources using Client Key (PLTC)
             const resources = await getServerResources(credentials.domain, credentials.pltc, serverId);
 
-            if (!resources || !resources.resources) continue;
+            if (!resources) {
+                accessDeniedCount++;
+                continue;
+            }
 
+            checkedCount++;
             const cpuUsage = resources.resources.cpu_absolute || 0;
             const serverName = serverAttrs.name;
 
-            console.log(`[CPU Monitor] ${serverName}: ${cpuUsage.toFixed(1)}% CPU`);
+            // console.log(`[CPU Monitor] ${serverName}: ${cpuUsage.toFixed(1)}% CPU`);
 
             // Check if CPU exceeds limit
             if (cpuUsage > cpuSettings.cpuLimit) {
@@ -196,7 +236,7 @@ module.exports = (bot) => {
                             name: serverName,
                             identifier: serverId,
                             uuid: serverAttrs.uuid,
-                            user: serverAttrs.user || 'Unknown'
+                            user: serverAttrs.user // Int ID
                         }
                     });
                     console.log(`[CPU Monitor] ${serverName} started exceeding limit (${cpuUsage.toFixed(1)}%)`);
@@ -208,52 +248,44 @@ module.exports = (bot) => {
 
                     // Check if duration exceeded
                     if (durationSeconds >= cpuSettings.duration) {
-                        console.log(`[CPU Monitor] STOPPING ${serverName} - exceeded limit for ${durationSeconds}s`);
+                        console.log(`[CPU Monitor] STOPPING ${serverName} - exceeded limit`);
 
                         // Stop the server
                         const stopped = await stopServer(credentials.domain, credentials.pltc, serverId);
 
                         if (stopped) {
-                            // Send alert
                             await sendAlert(cpuSettings, violation.serverInfo, cpuUsage, durationSeconds);
-
-                            // Clear violation tracking
                             cpuViolations.delete(serverId);
                         }
                     }
                 }
             } else {
-                // CPU back to normal, clear violation tracking
                 if (cpuViolations.has(serverId)) {
-                    console.log(`[CPU Monitor] ${serverName} CPU back to normal`);
                     cpuViolations.delete(serverId);
                 }
             }
         }
 
-        // REPORTING FEATURE (Requested by User)
-        // If notify group is set, send a periodic status report
+        // REPORTING FEATURE (Updated)
         if (cpuSettings.notifyGroupId) {
             const activeViolations = cpuViolations.size;
-            const checkedCount = servers.length;
 
+            // Only report "Clean" if no violations AND we actually checked something
             if (activeViolations === 0) {
-                // All clear message
                 const reportMsg = `
 ✅ <b>CPU MONITOR STATUS: AMAN</b>
     
 🕒 Waktu: <b>${new Date().toLocaleTimeString('id-ID')}</b>
-🖥️ Server Checked: <b>${checkedCount}</b>
-⚙️ Limit: <b>${cpuSettings.cpuLimit}%</b> (Durasi: ${cpuSettings.duration}s)
+🖥️ Server Found: <b>${servers.length}</b>
+✅ Access OK: <b>${checkedCount}</b>
+🚫 Access Denied: <b>${accessDeniedCount}</b>
+⚙️ Limit: <b>${cpuSettings.cpuLimit}%</b>
     
-<i>Tidak ada server yang melebihi batas pemakaian CPU.</i>
+<i>Tidak ada server overload.</i>
 `;
                 try {
                     await bot.sendMessage(cpuSettings.notifyGroupId, reportMsg, { parse_mode: 'HTML' });
                 } catch (e) { console.error('[CPU Monitor] Failed to send report:', e.message); }
-            } else {
-                // Some servers are violating (alerts are separate, but we can summarize)
-                // Doing nothing here because alerts are already sent per-violation
             }
         }
     }
@@ -344,7 +376,8 @@ module.exports = (bot) => {
             if (!credentials.domain || !credentials.pltc || credentials.pltc === '-') {
                 return bot.sendMessage(chatId, `❌ Panel ${cpuSettings.activePanel} belum dikonfigurasi!
         
-Gunakan /seturl, /setpltc, /setplta untuk setup panel dulu.`, { parse_mode: 'HTML' });
+Gunakan /seturl, /setpltc, /setplta untuk setup panel dulu.
+(Pastikan juga PLTA/Application Key sudah diset)`, { parse_mode: 'HTML' });
             }
 
             startMonitoring();

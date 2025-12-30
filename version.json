@@ -1,17 +1,19 @@
 {
-    "version": "9.4.1",
-    "build": "2024122909",
+    "version": "9.5",
+    "build": "2024122910",
     "releaseDate": "2024-12-29",
     "changelog": [
-        "🔥 Version 9.4.1 - HOTFIX",
+        "🔥 Version 9.5 - CPU MONITOR OVERHAUL",
         "",
-        "✅ FIX: STARTUP CRASH",
-        "   - Fixed 'Identifier cpuSettings has already been declared'",
-        "   - Fixed CPU Monitor syntax error",
+        "✅ MONITOR FIX: VISIBILITY",
+        "   - Switched to Application API (PLTA) for server listing",
+        "   - Now detects ALL servers on panel (not just admin's)",
         "",
-        "✅ SAFETY STABLE (from v9.4)",
-        "   - Update Safety V2 (Auto Backup/Restore)",
-        "   - CPU Monitor Reporting"
+        "✅ MONITOR REPORTING",
+        "   - Shows 'Servers Found' vs 'Access Access Denied'",
+        "   - Helps debug permission issues",
+        "",
+        "✅ SAFETY & STABILITY (from v9.4)"
     ],
     "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
     "minVersion": "7.0"
