@@ -565,7 +565,8 @@ Contoh: <code>-1001234567890</code>
 // Activate auto-add for group
 // ═══════════════════════════════════════════════════════════════════════════════════
 async function activateAutoAdd(chatId, msgId, userId, groupId, data, query) {
-    let config = loadJsonData(AUTOADD_FILE) || { configs: {} };
+    let config = loadJsonData(AUTOADD_FILE) || {};
+    if (!config.configs) config.configs = {};
 
     config.configs[groupId] = {
         channelId: data.channelId,
