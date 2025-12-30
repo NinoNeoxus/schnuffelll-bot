@@ -1,20 +1,17 @@
 {
-    "version": "9.4",
-    "build": "2024122908",
+    "version": "9.4.1",
+    "build": "2024122909",
     "releaseDate": "2024-12-29",
     "changelog": [
-        "🔥 Version 9.4 - SAFETY & STABILITY UPDATE",
+        "🔥 Version 9.4.1 - HOTFIX",
         "",
-        "✅ FIX: CPU MONITOR",
-        "   - Auto Report: Bot lapor 'Status Aman' tiap interval cek",
-        "   - Improved alerting logic",
+        "✅ FIX: STARTUP CRASH",
+        "   - Fixed 'Identifier cpuSettings has already been declared'",
+        "   - Fixed CPU Monitor syntax error",
         "",
-        "✅ SAFETY: UPDATE SYSTEM V2",
-        "   - AUTO BACKUP: Config & Database dibackup otomatis sebelum update",
-        "   - AUTO RESTORE: Data dikembalikan setelah update selesai",
-        "   - Anti-Data Loss Protection",
-        "",
-        "✅ NEW: REDEEM SYSTEM (from v9.3)"
+        "✅ SAFETY STABLE (from v9.4)",
+        "   - Update Safety V2 (Auto Backup/Restore)",
+        "   - CPU Monitor Reporting"
     ],
     "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
     "minVersion": "7.0"
