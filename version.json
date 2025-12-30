@@ -1,22 +1,20 @@
 {
-    "version": "9.3",
-    "build": "2024122907",
+    "version": "9.4",
+    "build": "2024122908",
     "releaseDate": "2024-12-29",
     "changelog": [
-        "🔥 Version 9.3 - REDEEM SYSTEM EXTENSION",
+        "🔥 Version 9.4 - SAFETY & STABILITY UPDATE",
         "",
-        "✅ NEW: Redeem Code System",
-        "   - Owner: /createcode <nama> <hari>",
-        "   - User: /redeem <kode>",
-        "   - Akses fitur Install Panel & Management",
+        "✅ FIX: CPU MONITOR",
+        "   - Auto Report: Bot lapor 'Status Aman' tiap interval cek",
+        "   - Improved alerting logic",
         "",
-        "✅ SECURE: Feature Access",
-        "   - User redeem BISA akses: Install, Panel Mgmt, Server Mgmt, Guard",
-        "   - User redeem TIDAK BISA akses: Create VPS (Token Restricted)",
+        "✅ SAFETY: UPDATE SYSTEM V2",
+        "   - AUTO BACKUP: Config & Database dibackup otomatis sebelum update",
+        "   - AUTO RESTORE: Data dikembalikan setelah update selesai",
+        "   - Anti-Data Loss Protection",
         "",
-        "✅ FIX: Permissions",
-        "   - /install, /swings, /antiddos now check for redeem access",
-        "   - /guard now checks for redeem access"
+        "✅ NEW: REDEEM SYSTEM (from v9.3)"
     ],
     "downloadUrl": "https://raw.githubusercontent.com/NinoNeoxus/schnuffelll-bot/main/latest.zip",
     "minVersion": "7.0"

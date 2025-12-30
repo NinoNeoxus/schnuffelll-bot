@@ -230,66 +230,91 @@ module.exports = (bot) => {
                 }
             }
         }
-    }
 
-    // Start monitoring
-    function startMonitoring() {
-        const cpuSettings = loadCpuSettings();
+        // REPORTING FEATURE (Requested by User)
+        // If notify group is set, send a periodic status report
+        if (cpuSettings.notifyGroupId) {
+            const activeViolations = cpuViolations.size;
+            const checkedCount = servers.length;
 
-        if (monitorInterval) {
-            clearInterval(monitorInterval);
+            if (activeViolations === 0) {
+                // All clear message
+                const reportMsg = `
+✅ <b>CPU MONITOR STATUS: AMAN</b>
+    
+🕒 Waktu: <b>${new Date().toLocaleTimeString('id-ID')}</b>
+🖥️ Server Checked: <b>${checkedCount}</b>
+⚙️ Limit: <b>${cpuSettings.cpuLimit}%</b> (Durasi: ${cpuSettings.duration}s)
+    
+<i>Tidak ada server yang melebihi batas pemakaian CPU.</i>
+`;
+                try {
+                    await bot.sendMessage(cpuSettings.notifyGroupId, reportMsg, { parse_mode: 'HTML' });
+                } catch (e) { console.error('[CPU Monitor] Failed to send report:', e.message); }
+            } else {
+                // Some servers are violating (alerts are separate, but we can summarize)
+                // Doing nothing here because alerts are already sent per-violation
+            }
         }
 
-        cpuSettings.enabled = true;
-        saveCpuSettings(cpuSettings);
+        // Start monitoring
+        function startMonitoring() {
+            const cpuSettings = loadCpuSettings();
 
-        // Run immediately
-        runMonitoring();
+            if (monitorInterval) {
+                clearInterval(monitorInterval);
+            }
 
-        // Then run periodically
-        monitorInterval = setInterval(runMonitoring, cpuSettings.checkInterval);
+            cpuSettings.enabled = true;
+            saveCpuSettings(cpuSettings);
 
-        console.log(`[CPU Monitor] Started with interval ${cpuSettings.checkInterval}ms`);
-        return true;
-    }
+            // Run immediately
+            runMonitoring();
 
-    // Stop monitoring
-    function stopMonitoring() {
-        const cpuSettings = loadCpuSettings();
+            // Then run periodically
+            monitorInterval = setInterval(runMonitoring, cpuSettings.checkInterval);
 
-        if (monitorInterval) {
-            clearInterval(monitorInterval);
-            monitorInterval = null;
+            console.log(`[CPU Monitor] Started with interval ${cpuSettings.checkInterval}ms`);
+            return true;
         }
 
-        cpuSettings.enabled = false;
-        saveCpuSettings(cpuSettings);
-        cpuViolations.clear();
+        // Stop monitoring
+        function stopMonitoring() {
+            const cpuSettings = loadCpuSettings();
 
-        console.log('[CPU Monitor] Stopped');
-        return true;
-    }
+            if (monitorInterval) {
+                clearInterval(monitorInterval);
+                monitorInterval = null;
+            }
 
-    // =================================================================
-    // BOT COMMANDS
-    // =================================================================
+            cpuSettings.enabled = false;
+            saveCpuSettings(cpuSettings);
+            cpuViolations.clear();
 
-    // /cpumon - Main command
-    bot.onText(/^\/cpumon(?:\s+(.+))?$/i, async (msg, match) => {
-        const chatId = msg.chat.id;
-        const userId = msg.from.id;
-        const subCommand = match[1] ? match[1].trim().toLowerCase() : '';
-
-        // Owner only
-        if (userId !== settings.ownerId) {
-            return bot.sendMessage(chatId, '❌ ᴋʜᴜꜱᴜꜱ ᴏᴡɴᴇʀ!');
+            console.log('[CPU Monitor] Stopped');
+            return true;
         }
 
-        const cpuSettings = loadCpuSettings();
+        // =================================================================
+        // BOT COMMANDS
+        // =================================================================
 
-        // No subcommand - show help
-        if (!subCommand) {
-            return bot.sendMessage(chatId, `
+        // /cpumon - Main command
+        bot.onText(/^\/cpumon(?:\s+(.+))?$/i, async (msg, match) => {
+            const chatId = msg.chat.id;
+            const userId = msg.from.id;
+            const subCommand = match[1] ? match[1].trim().toLowerCase() : '';
+
+            // Owner only
+            if (userId !== settings.ownerId) {
+                return bot.sendMessage(chatId, '❌ ᴋʜᴜꜱᴜꜱ ᴏᴡɴᴇʀ!');
+            }
+
+            const cpuSettings = loadCpuSettings();
+
+            // No subcommand - show help
+            if (!subCommand) {
+                return bot.sendMessage(chatId, `
 📊 <b>CPU MONITORING PANEL</b>
 
 <b>Status:</b> ${cpuSettings.enabled ? '🟢 AKTIF' : '🔴 NONAKTIF'}
@@ -309,20 +334,20 @@ module.exports = (bot) => {
 • <code>/cpumon set group [id]</code> - Set notify group
 • <code>/cpumon set panel [V1-V5]</code> - Set active panel
 `, { parse_mode: 'HTML', reply_to_message_id: msg.message_id });
-        }
-
-        // /cpumon start
-        if (subCommand === 'start') {
-            const credentials = getPanelCredentials(cpuSettings.activePanel);
-
-            if (!credentials.domain || !credentials.pltc || credentials.pltc === '-') {
-                return bot.sendMessage(chatId, `❌ Panel ${cpuSettings.activePanel} belum dikonfigurasi!
-        
-Gunakan /seturl, /setpltc, /setplta untuk setup panel dulu.`, { parse_mode: 'HTML' });
             }
 
-            startMonitoring();
-            return bot.sendMessage(chatId, `✅ <b>CPU Monitoring STARTED!</b>
+            // /cpumon start
+            if (subCommand === 'start') {
+                const credentials = getPanelCredentials(cpuSettings.activePanel);
+
+                if (!credentials.domain || !credentials.pltc || credentials.pltc === '-') {
+                    return bot.sendMessage(chatId, `❌ Panel ${cpuSettings.activePanel} belum dikonfigurasi!
+        
+Gunakan /seturl, /setpltc, /setplta untuk setup panel dulu.`, { parse_mode: 'HTML' });
+                }
+
+                startMonitoring();
+                return bot.sendMessage(chatId, `✅ <b>CPU Monitoring STARTED!</b>
 
 Panel: <b>${cpuSettings.activePanel}</b>
 CPU Limit: <b>${cpuSettings.cpuLimit}%</b>
@@ -330,25 +355,25 @@ Duration: <b>${cpuSettings.duration} detik</b>
 Check setiap: <b>${cpuSettings.checkInterval / 1000} detik</b>
 
 Bot akan auto-stop server yang melebihi batas!`, { parse_mode: 'HTML', reply_to_message_id: msg.message_id });
-        }
+            }
 
-        // /cpumon stop
-        if (subCommand === 'stop') {
-            stopMonitoring();
-            return bot.sendMessage(chatId, `🛑 <b>CPU Monitoring STOPPED!</b>
+            // /cpumon stop
+            if (subCommand === 'stop') {
+                stopMonitoring();
+                return bot.sendMessage(chatId, `🛑 <b>CPU Monitoring STOPPED!</b>
 
 Monitoring sudah dinonaktifkan.`, { parse_mode: 'HTML', reply_to_message_id: msg.message_id });
-        }
+            }
 
-        // /cpumon status
-        if (subCommand === 'status') {
-            const violations = [];
-            cpuViolations.forEach((v, id) => {
-                const duration = Math.floor((Date.now() - v.startTime) / 1000);
-                violations.push(`• ${v.serverInfo.name}: ${duration}s`);
-            });
+            // /cpumon status
+            if (subCommand === 'status') {
+                const violations = [];
+                cpuViolations.forEach((v, id) => {
+                    const duration = Math.floor((Date.now() - v.startTime) / 1000);
+                    violations.push(`• ${v.serverInfo.name}: ${duration}s`);
+                });
 
-            return bot.sendMessage(chatId, `
+                return bot.sendMessage(chatId, `
 📊 <b>CPU MONITORING STATUS</b>
 
 <b>Status:</b> ${cpuSettings.enabled ? '🟢 AKTIF' : '🔴 NONAKTIF'}
@@ -356,82 +381,82 @@ Monitoring sudah dinonaktifkan.`, { parse_mode: 'HTML', reply_to_message_id: msg
 <b>Active Violations:</b> ${cpuViolations.size}
 ${violations.length > 0 ? '\n' + violations.join('\n') : ''}
 `, { parse_mode: 'HTML', reply_to_message_id: msg.message_id });
-        }
-
-        // /cpumon set [option] [value]
-        if (subCommand.startsWith('set ')) {
-            const parts = subCommand.split(' ').slice(1);
-            const option = parts[0];
-            const value = parts.slice(1).join(' ');
-
-            if (!option || !value) {
-                return bot.sendMessage(chatId, '❌ Format: /cpumon set [option] [value]');
             }
 
-            switch (option) {
-                case 'limit':
-                    const limit = parseInt(value);
-                    if (isNaN(limit) || limit < 1 || limit > 500) {
-                        return bot.sendMessage(chatId, '❌ Limit harus angka antara 1-500');
-                    }
-                    cpuSettings.cpuLimit = limit;
-                    saveCpuSettings(cpuSettings);
-                    return bot.sendMessage(chatId, `✅ CPU Limit diset ke <b>${limit}%</b>`, { parse_mode: 'HTML' });
+            // /cpumon set [option] [value]
+            if (subCommand.startsWith('set ')) {
+                const parts = subCommand.split(' ').slice(1);
+                const option = parts[0];
+                const value = parts.slice(1).join(' ');
 
-                case 'duration':
-                    const duration = parseInt(value);
-                    if (isNaN(duration) || duration < 5 || duration > 600) {
-                        return bot.sendMessage(chatId, '❌ Duration harus angka antara 5-600 detik');
-                    }
-                    cpuSettings.duration = duration;
-                    saveCpuSettings(cpuSettings);
-                    return bot.sendMessage(chatId, `✅ Duration diset ke <b>${duration} detik</b>`, { parse_mode: 'HTML' });
+                if (!option || !value) {
+                    return bot.sendMessage(chatId, '❌ Format: /cpumon set [option] [value]');
+                }
 
-                case 'interval':
-                    const interval = parseInt(value);
-                    if (isNaN(interval) || interval < 10 || interval > 3600) {
-                        return bot.sendMessage(chatId, '❌ Interval harus angka antara 10-3600 detik');
-                    }
-                    cpuSettings.checkInterval = interval * 1000;
-                    saveCpuSettings(cpuSettings);
+                switch (option) {
+                    case 'limit':
+                        const limit = parseInt(value);
+                        if (isNaN(limit) || limit < 1 || limit > 500) {
+                            return bot.sendMessage(chatId, '❌ Limit harus angka antara 1-500');
+                        }
+                        cpuSettings.cpuLimit = limit;
+                        saveCpuSettings(cpuSettings);
+                        return bot.sendMessage(chatId, `✅ CPU Limit diset ke <b>${limit}%</b>`, { parse_mode: 'HTML' });
 
-                    // Restart monitoring if active
-                    if (cpuSettings.enabled) {
-                        stopMonitoring();
-                        startMonitoring();
-                    }
-                    return bot.sendMessage(chatId, `✅ Check Interval diset ke <b>${interval} detik</b>`, { parse_mode: 'HTML' });
+                    case 'duration':
+                        const duration = parseInt(value);
+                        if (isNaN(duration) || duration < 5 || duration > 600) {
+                            return bot.sendMessage(chatId, '❌ Duration harus angka antara 5-600 detik');
+                        }
+                        cpuSettings.duration = duration;
+                        saveCpuSettings(cpuSettings);
+                        return bot.sendMessage(chatId, `✅ Duration diset ke <b>${duration} detik</b>`, { parse_mode: 'HTML' });
 
-                case 'group':
-                    cpuSettings.notifyGroupId = value;
-                    saveCpuSettings(cpuSettings);
-                    return bot.sendMessage(chatId, `✅ Notify Group diset ke <code>${value}</code>`, { parse_mode: 'HTML' });
+                    case 'interval':
+                        const interval = parseInt(value);
+                        if (isNaN(interval) || interval < 10 || interval > 3600) {
+                            return bot.sendMessage(chatId, '❌ Interval harus angka antara 10-3600 detik');
+                        }
+                        cpuSettings.checkInterval = interval * 1000;
+                        saveCpuSettings(cpuSettings);
 
-                case 'panel':
-                    const validPanels = ['V1', 'V2', 'V3', 'V4', 'V5'];
-                    if (!validPanels.includes(value.toUpperCase())) {
-                        return bot.sendMessage(chatId, '❌ Panel harus V1, V2, V3, V4, atau V5');
-                    }
-                    cpuSettings.activePanel = value.toUpperCase();
-                    saveCpuSettings(cpuSettings);
-                    return bot.sendMessage(chatId, `✅ Active Panel diset ke <b>${value.toUpperCase()}</b>`, { parse_mode: 'HTML' });
+                        // Restart monitoring if active
+                        if (cpuSettings.enabled) {
+                            stopMonitoring();
+                            startMonitoring();
+                        }
+                        return bot.sendMessage(chatId, `✅ Check Interval diset ke <b>${interval} detik</b>`, { parse_mode: 'HTML' });
 
-                default:
-                    return bot.sendMessage(chatId, '❌ Option tidak valid! Gunakan: limit, duration, interval, group, panel');
+                    case 'group':
+                        cpuSettings.notifyGroupId = value;
+                        saveCpuSettings(cpuSettings);
+                        return bot.sendMessage(chatId, `✅ Notify Group diset ke <code>${value}</code>`, { parse_mode: 'HTML' });
+
+                    case 'panel':
+                        const validPanels = ['V1', 'V2', 'V3', 'V4', 'V5'];
+                        if (!validPanels.includes(value.toUpperCase())) {
+                            return bot.sendMessage(chatId, '❌ Panel harus V1, V2, V3, V4, atau V5');
+                        }
+                        cpuSettings.activePanel = value.toUpperCase();
+                        saveCpuSettings(cpuSettings);
+                        return bot.sendMessage(chatId, `✅ Active Panel diset ke <b>${value.toUpperCase()}</b>`, { parse_mode: 'HTML' });
+
+                    default:
+                        return bot.sendMessage(chatId, '❌ Option tidak valid! Gunakan: limit, duration, interval, group, panel');
+                }
             }
+
+            // Unknown subcommand
+            return bot.sendMessage(chatId, '❌ Subcommand tidak dikenal. Ketik /cpumon untuk bantuan.');
+        });
+
+        // Auto-start monitoring if was enabled before restart
+        const cpuSettings = loadCpuSettings();
+        if (cpuSettings.enabled) {
+            console.log('[CPU Monitor] Auto-starting from previous session...');
+            setTimeout(() => {
+                startMonitoring();
+            }, 5000); // Delay 5 seconds to let bot fully initialize
         }
 
-        // Unknown subcommand
-        return bot.sendMessage(chatId, '❌ Subcommand tidak dikenal. Ketik /cpumon untuk bantuan.');
-    });
-
-    // Auto-start monitoring if was enabled before restart
-    const cpuSettings = loadCpuSettings();
-    if (cpuSettings.enabled) {
-        console.log('[CPU Monitor] Auto-starting from previous session...');
-        setTimeout(() => {
-            startMonitoring();
-        }, 5000); // Delay 5 seconds to let bot fully initialize
-    }
-
-};
+    };

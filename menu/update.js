@@ -395,6 +395,64 @@ module.exports = (bot) => {
         return copiedCount;
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // SAFETY BACKUP SYSTEM
+    // ═══════════════════════════════════════════════════════════════════════════════
+    const SAFE_BACKUP_DIR = './temp_safe_backup';
+
+    function backupUserData() {
+        console.log('[UPDATE] 🛡️ Starting SAFETY BACKUP of user data...');
+        try {
+            if (fs.existsSync(SAFE_BACKUP_DIR)) {
+                fs.rmSync(SAFE_BACKUP_DIR, { recursive: true, force: true });
+            }
+            fs.mkdirSync(SAFE_BACKUP_DIR, { recursive: true });
+
+            // Backup config.js
+            if (fs.existsSync('./config.js')) {
+                fs.copyFileSync('./config.js', path.join(SAFE_BACKUP_DIR, 'config.js'));
+                console.log('[UPDATE] ✅ Backed up config.js');
+            }
+
+            // Backup db folder
+            if (fs.existsSync('./db')) {
+                // Recursive copy for DB
+                fs.cpSync('./db', path.join(SAFE_BACKUP_DIR, 'db'), { recursive: true });
+                console.log('[UPDATE] ✅ Backed up db/ folder');
+            }
+
+            return true;
+        } catch (e) {
+            console.error('[UPDATE] ❌ BACKUP FAILED:', e.message);
+            return false;
+        }
+    }
+
+    function restoreUserData() {
+        console.log('[UPDATE] ♻️ Restoring user data from backup...');
+        try {
+            // Restore config.js
+            if (fs.existsSync(path.join(SAFE_BACKUP_DIR, 'config.js'))) {
+                fs.copyFileSync(path.join(SAFE_BACKUP_DIR, 'config.js'), './config.js');
+                console.log('[UPDATE] ✅ Restored config.js');
+            }
+
+            // Restore db folder
+            if (fs.existsSync(path.join(SAFE_BACKUP_DIR, 'db'))) {
+                if (!fs.existsSync('./db')) fs.mkdirSync('./db');
+                fs.cpSync(path.join(SAFE_BACKUP_DIR, 'db'), './db', { recursive: true, force: true });
+                console.log('[UPDATE] ✅ Restored db/ folder');
+            }
+
+            // Cleanup backup
+            fs.rmSync(SAFE_BACKUP_DIR, { recursive: true, force: true });
+            return true;
+        } catch (e) {
+            console.error('[UPDATE] ❌ RESTORE FAILED:', e.message);
+            return false;
+        }
+    }
+
     // Cleanup temp files
     function cleanup() {
         console.log('[UPDATE] 🧹 Cleaning up temp files...');
@@ -596,17 +654,31 @@ Ketik <code>/update confirm</code> untuk mulai update.
                 throw new Error("Extraction failed: Temp folder empty");
             }
 
-            // Step 3: Safe Clean (Only delete code folders to prevent ghost files)
+            // Step 2b: SAFETY BACKUP
+            await bot.editMessageText('🛡️ [2.5/4] Backup User Data...', {
+                chat_id: chatId,
+                message_id: wait.message_id
+            });
+            if (!backupUserData()) {
+                throw new Error("Safety Backup Failed - Aborting update to protect data");
+            }
+
+            // Step 3: Safe Clean
             await bot.editMessageText('🧹 [3/4] Update kode...', {
                 chat_id: chatId,
                 message_id: wait.message_id
             });
 
-            // Safe clean: Only delete menu and lib to ensure no ghost commands
+            // Safe clean uses improved backup-aware logic if needed, or standard clean
+            // Using cleanAllFiles derived from standard update logic if available, or manual clean
             try {
+                // If cleanAllFiles is defined in scope (it is helper)
+                cleanAllFiles();
+            } catch (e) {
+                console.log('[UPDATE] Standard clean failed, using manual fallback:', e.message);
                 if (fs.existsSync('./menu')) fs.rmSync('./menu', { recursive: true, force: true });
                 if (fs.existsSync('./lib')) fs.rmSync('./lib', { recursive: true, force: true });
-            } catch (e) { console.log('[UPDATE] Safe clean error:', e.message); }
+            }
 
             // Step 4: Copy new files (Overwrite)
             await bot.editMessageText('📁 [4/4] Menyalin file baru...', {
@@ -614,6 +686,9 @@ Ketik <code>/update confirm</code> untuk mulai update.
                 message_id: wait.message_id
             });
             const copiedFiles = copyToRoot();
+
+            // Step 4b: RESTORE DATA (Double check)
+            restoreUserData();
 
             // Cleanup temp files
             cleanup();
