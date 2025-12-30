@@ -380,46 +380,84 @@ Error: ${e.message}
                 });
             }
         }
-    });
-
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    // Handle callback queries for setup
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    bot.on('callback_query', async (query) => {
-        const data = query.data;
-        const userId = query.from.id;
-        const chatId = query.message.chat.id;
-        const msgId = query.message.message_id;
-
-        if (!data.startsWith('aa_')) return;
-
-        // Cancel
-        if (data === 'aa_cancel') {
-            setupState.delete(userId);
-            return bot.editMessageText('❌ Setup dibatalkan.', { chat_id: chatId, message_id: msgId });
+    }
         }
 
-        // Role selection → Show group list
-        if (data.startsWith('aa_role_')) {
-            const role = data.replace('aa_role_', '');
-            const state = setupState.get(userId);
+// Step 3: Group (Manual Input)
+if (state.step === 'group') {
+    const groupId = text.trim();
 
-            if (!state || state.step !== 'role') {
-                return bot.answerCallbackQuery(query.id, { text: 'Session expired. Ketik /autoadd lagi.', show_alert: true });
-            }
+    // Basic validation for group ID (usually starts with -100 or is negative)
+    if (!groupId.match(/^-?\d+$/)) {
+        return bot.sendMessage(chatId, '❌ ID Grup tidak valid! ID harus berupa angka.\nContoh: -1001234567890');
+    }
 
-            state.data.role = role;
-            state.step = 'group';
-            setupState.set(userId, state);
+    const wait = await bot.sendMessage(chatId, '⏳ Mengecek grup...');
 
-            bot.answerCallbackQuery(query.id, { text: '⏳ Mengambil daftar grup...' });
+    try {
+        const chat = await bot.getChat(groupId);
 
-            // Get tracked groups
-            const groups = getTrackedGroups();
-            const groupList = Object.values(groups);
+        if (chat.type !== 'group' && chat.type !== 'supergroup') {
+            return bot.editMessageText('❌ ID yang dimasukkan bukan ID grup!', {
+                chat_id: chatId, message_id: wait.message_id
+            });
+        }
 
-            if (groupList.length === 0) {
-                return bot.editMessageText(`✅ <b>Role Dipilih:</b> ${getRoleName(role)}
+        // Activate directly
+        await activateAutoAdd(chatId, wait.message_id, userId, groupId, { ...state.data, groupTitle: chat.title }, null);
+
+    } catch (e) {
+        bot.editMessageText(`❌ <b>Grup tidak ditemukan!</b>
+
+Error: ${e.message}
+
+📌 Pastikan:
+• ID Grup benar
+• Bot sudah dimasukkan ke grup tersebut`, {
+            chat_id: chatId, message_id: wait.message_id, parse_mode: 'HTML'
+        });
+    }
+}
+    });
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// Handle callback queries for setup
+// ═══════════════════════════════════════════════════════════════════════════════════
+bot.on('callback_query', async (query) => {
+    const data = query.data;
+    const userId = query.from.id;
+    const chatId = query.message.chat.id;
+    const msgId = query.message.message_id;
+
+    if (!data.startsWith('aa_')) return;
+
+    // Cancel
+    if (data === 'aa_cancel') {
+        setupState.delete(userId);
+        return bot.editMessageText('❌ Setup dibatalkan.', { chat_id: chatId, message_id: msgId });
+    }
+
+    // Role selection → Show group list
+    if (data.startsWith('aa_role_')) {
+        const role = data.replace('aa_role_', '');
+        const state = setupState.get(userId);
+
+        if (!state || state.step !== 'role') {
+            return bot.answerCallbackQuery(query.id, { text: 'Session expired. Ketik /autoadd lagi.', show_alert: true });
+        }
+
+        state.data.role = role;
+        state.step = 'group';
+        setupState.set(userId, state);
+
+        bot.answerCallbackQuery(query.id, { text: '⏳ Mengambil daftar grup...' });
+
+        // Get tracked groups
+        const groups = getTrackedGroups();
+        const groupList = Object.values(groups);
+
+        if (groupList.length === 0) {
+            return bot.editMessageText(`✅ <b>Role Dipilih:</b> ${getRoleName(role)}
 
 <blockquote>Step 3 of 3: Target Grup</blockquote>
 
@@ -431,115 +469,119 @@ Error: ${e.message}
 3. Ketik <code>/autoadd</code> lagi
 
 💡 Atau ketik <code>/idgb</code> di grup untuk dapat ID grup.`, {
-                    chat_id: chatId,
-                    message_id: msgId,
-                    parse_mode: 'HTML'
-                });
-            }
+                chat_id: chatId,
+                message_id: msgId,
+                parse_mode: 'HTML'
+            });
+        }
 
-            // Build group buttons with short index (callback_data max 64 bytes)
-            // Store group list in state for reference
-            state.data.groupList = groupList;
-            setupState.set(userId, state);
+        // Build group buttons with short index (callback_data max 64 bytes)
+        // Store group list in state for reference
+        state.data.groupList = groupList;
+        setupState.set(userId, state);
 
-            const keyboard = groupList.map((g, idx) => [{
-                text: `📋 ${g.title}`,
-                callback_data: `aa_g_${idx}` // Short callback: aa_g_0, aa_g_1, etc
-            }]);
-            keyboard.push([{ text: '❌ Batal', callback_data: 'aa_cancel' }]);
+        const keyboard = groupList.map((g, idx) => [{
+            text: `📋 ${g.title}`,
+            callback_data: `aa_g_${idx}` // Short callback: aa_g_0, aa_g_1, etc
+        }]);
+        keyboard.push([{ text: '❌ Batal', callback_data: 'aa_cancel' }]);
 
-            bot.editMessageText(`✅ <b>Role Dipilih:</b> ${getRoleName(role)}
+        bot.editMessageText(`✅ <b>Role Dipilih:</b> ${getRoleName(role)}
 
 <blockquote>Step 3 of 3: Target Grup</blockquote>
 
 📋 <b>Pilih Grup untuk mengaktifkan auto-add:</b>
 
-<i>Menampilkan ${groupList.length} grup yang bot join</i>`, {
+<i>Menampilkan ${groupList.length} grup yang bot join</i>
+
+💡 <b>Atau ketik manual ID grup:</b>
+Contoh: <code>-1001234567890</code>
+(Dapat dari /idgb di grup)`, {
+            chat_id: chatId,
+            message_id: msgId,
+            parse_mode: 'HTML',
+            reply_markup: { inline_keyboard: keyboard }
+        });
+    }
+
+    // Group selection (using short index)
+    if (data.startsWith('aa_g_')) {
+        const idx = parseInt(data.replace('aa_g_', ''));
+        const state = setupState.get(userId);
+
+        if (!state || !state.data.groupList) {
+            return bot.answerCallbackQuery(query.id, { text: 'Session expired. Ketik /autoadd lagi.', show_alert: true });
+        }
+
+        const selectedGroup = state.data.groupList[idx];
+        if (!selectedGroup) {
+            return bot.answerCallbackQuery(query.id, { text: 'Grup tidak valid.', show_alert: true });
+        }
+
+        const groupId = selectedGroup.id;
+        const groupTitle = selectedGroup.title;
+
+        await activateAutoAdd(chatId, msgId, userId, groupId, { ...state.data, groupTitle }, query);
+    }
+
+    // Verify join callback (for users in group)
+    if (data.startsWith('aa_verify_')) {
+        const parts = data.split('_');
+        const targetUserId = parts[2];
+        const groupId = parts[3];
+
+        if (String(query.from.id) !== String(targetUserId)) {
+            return bot.answerCallbackQuery(query.id, { text: '❌ Tombol ini bukan untuk kamu!', show_alert: true });
+        }
+
+        await verifyAndAddUser(query, groupId);
+    }
+
+    // Autoaddoff callback
+    if (data.startsWith('aa_off_')) {
+        const groupId = data.replace('aa_off_', '');
+
+        if (!isOwner(userId)) {
+            return bot.answerCallbackQuery(query.id, { text: '❌ Khusus Owner!', show_alert: true });
+        }
+
+        const config = loadJsonData(AUTOADD_FILE) || { configs: {} };
+
+        if (config.configs[groupId]) {
+            config.configs[groupId].enabled = false;
+            saveJsonData(AUTOADD_FILE, config);
+
+            bot.editMessageText(`✅ Auto-add untuk <b>${config.configs[groupId].groupTitle || groupId}</b> dinonaktifkan.`, {
                 chat_id: chatId,
                 message_id: msgId,
-                parse_mode: 'HTML',
-                reply_markup: { inline_keyboard: keyboard }
+                parse_mode: 'HTML'
             });
+            bot.answerCallbackQuery(query.id, { text: '✅ Dinonaktifkan!' });
         }
+    }
+});
 
-        // Group selection (using short index)
-        if (data.startsWith('aa_g_')) {
-            const idx = parseInt(data.replace('aa_g_', ''));
-            const state = setupState.get(userId);
+// ═══════════════════════════════════════════════════════════════════════════════════
+// Activate auto-add for group
+// ═══════════════════════════════════════════════════════════════════════════════════
+async function activateAutoAdd(chatId, msgId, userId, groupId, data, query) {
+    let config = loadJsonData(AUTOADD_FILE) || { configs: {} };
 
-            if (!state || !state.data.groupList) {
-                return bot.answerCallbackQuery(query.id, { text: 'Session expired. Ketik /autoadd lagi.', show_alert: true });
-            }
+    config.configs[groupId] = {
+        channelId: data.channelId,
+        channelTitle: data.channelTitle,
+        channelUsername: data.channelUsername,
+        role: data.role,
+        groupTitle: data.groupTitle,
+        createdBy: userId,
+        createdAt: new Date().toISOString(),
+        enabled: true
+    };
 
-            const selectedGroup = state.data.groupList[idx];
-            if (!selectedGroup) {
-                return bot.answerCallbackQuery(query.id, { text: 'Grup tidak valid.', show_alert: true });
-            }
+    saveJsonData(AUTOADD_FILE, config);
+    setupState.delete(userId);
 
-            const groupId = selectedGroup.id;
-            const groupTitle = selectedGroup.title;
-
-            await activateAutoAdd(chatId, msgId, userId, groupId, { ...state.data, groupTitle }, query);
-        }
-
-        // Verify join callback (for users in group)
-        if (data.startsWith('aa_verify_')) {
-            const parts = data.split('_');
-            const targetUserId = parts[2];
-            const groupId = parts[3];
-
-            if (String(query.from.id) !== String(targetUserId)) {
-                return bot.answerCallbackQuery(query.id, { text: '❌ Tombol ini bukan untuk kamu!', show_alert: true });
-            }
-
-            await verifyAndAddUser(query, groupId);
-        }
-
-        // Autoaddoff callback
-        if (data.startsWith('aa_off_')) {
-            const groupId = data.replace('aa_off_', '');
-
-            if (!isOwner(userId)) {
-                return bot.answerCallbackQuery(query.id, { text: '❌ Khusus Owner!', show_alert: true });
-            }
-
-            const config = loadJsonData(AUTOADD_FILE) || { configs: {} };
-
-            if (config.configs[groupId]) {
-                config.configs[groupId].enabled = false;
-                saveJsonData(AUTOADD_FILE, config);
-
-                bot.editMessageText(`✅ Auto-add untuk <b>${config.configs[groupId].groupTitle || groupId}</b> dinonaktifkan.`, {
-                    chat_id: chatId,
-                    message_id: msgId,
-                    parse_mode: 'HTML'
-                });
-                bot.answerCallbackQuery(query.id, { text: '✅ Dinonaktifkan!' });
-            }
-        }
-    });
-
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    // Activate auto-add for group
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    async function activateAutoAdd(chatId, msgId, userId, groupId, data, query) {
-        let config = loadJsonData(AUTOADD_FILE) || { configs: {} };
-
-        config.configs[groupId] = {
-            channelId: data.channelId,
-            channelTitle: data.channelTitle,
-            channelUsername: data.channelUsername,
-            role: data.role,
-            groupTitle: data.groupTitle,
-            createdBy: userId,
-            createdAt: new Date().toISOString(),
-            enabled: true
-        };
-
-        saveJsonData(AUTOADD_FILE, config);
-        setupState.delete(userId);
-
-        const successMsg = `✅ <b>AUTO-ADD AKTIF!</b>
+    const successMsg = `✅ <b>AUTO-ADD AKTIF!</b>
 
 📢 <b>Channel:</b> ${data.channelTitle}
 🎯 <b>Role:</b> ${getRoleName(data.role)}
@@ -553,219 +595,219 @@ Error: ${e.message}
 
 💡 Gunakan <code>/autoaddoff</code> untuk mematikan.`;
 
-        if (msgId) {
-            bot.editMessageText(successMsg, { chat_id: chatId, message_id: msgId, parse_mode: 'HTML' });
-        } else {
-            bot.sendMessage(chatId, successMsg, { parse_mode: 'HTML' });
-        }
-
-        if (query) {
-            bot.answerCallbackQuery(query.id, { text: '✅ Auto-add aktif!' });
-        }
-
-        console.log(`[AUTOADD] Activated for group ${groupId} with role ${data.role}`);
+    if (msgId) {
+        bot.editMessageText(successMsg, { chat_id: chatId, message_id: msgId, parse_mode: 'HTML' });
+    } else {
+        bot.sendMessage(chatId, successMsg, { parse_mode: 'HTML' });
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    // Verify user joined channel and add to role
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    async function verifyAndAddUser(query, groupId) {
-        const userId = query.from.id;
-        const chatId = query.message.chat.id;
-        const msgId = query.message.message_id;
+    if (query) {
+        bot.answerCallbackQuery(query.id, { text: '✅ Auto-add aktif!' });
+    }
 
-        const config = loadJsonData(AUTOADD_FILE) || { configs: {} };
-        const groupConfig = config.configs[groupId];
+    console.log(`[AUTOADD] Activated for group ${groupId} with role ${data.role}`);
+}
 
-        if (!groupConfig || !groupConfig.enabled) {
-            return bot.answerCallbackQuery(query.id, { text: '❌ Auto-add tidak aktif!', show_alert: true });
-        }
+// ═══════════════════════════════════════════════════════════════════════════════════
+// Verify user joined channel and add to role
+// ═══════════════════════════════════════════════════════════════════════════════════
+async function verifyAndAddUser(query, groupId) {
+    const userId = query.from.id;
+    const chatId = query.message.chat.id;
+    const msgId = query.message.message_id;
 
-        const isInChannel = await isUserInChannel(userId, groupConfig.channelId);
+    const config = loadJsonData(AUTOADD_FILE) || { configs: {} };
+    const groupConfig = config.configs[groupId];
 
-        if (!isInChannel) {
-            return bot.answerCallbackQuery(query.id, {
-                text: '❌ Kamu belum join channel! Join dulu, tunggu beberapa detik, lalu klik lagi.',
-                show_alert: true
-            });
-        }
+    if (!groupConfig || !groupConfig.enabled) {
+        return bot.answerCallbackQuery(query.id, { text: '❌ Auto-add tidak aktif!', show_alert: true });
+    }
 
-        const added = addUserToRole(userId, groupConfig.role);
+    const isInChannel = await isUserInChannel(userId, groupConfig.channelId);
 
-        if (added) {
-            bot.editMessageText(`✅ <b>BERHASIL TERDAFTAR!</b>
+    if (!isInChannel) {
+        return bot.answerCallbackQuery(query.id, {
+            text: '❌ Kamu belum join channel! Join dulu, tunggu beberapa detik, lalu klik lagi.',
+            show_alert: true
+        });
+    }
+
+    const added = addUserToRole(userId, groupConfig.role);
+
+    if (added) {
+        bot.editMessageText(`✅ <b>BERHASIL TERDAFTAR!</b>
 
 👤 User: ${query.from.first_name}
 🎯 Role: ${getRoleName(groupConfig.role)}
 
 <i>Selamat! Kamu sekarang memiliki akses ${getRoleName(groupConfig.role)}.</i>`, {
-                chat_id: chatId,
-                message_id: msgId,
-                parse_mode: 'HTML'
-            });
+            chat_id: chatId,
+            message_id: msgId,
+            parse_mode: 'HTML'
+        });
 
-            bot.answerCallbackQuery(query.id, { text: '✅ Berhasil terdaftar!' });
-            bot.sendMessage(groupId, `🎉 <b>${query.from.first_name}</b> berhasil terdaftar sebagai ${getRoleName(groupConfig.role)}!`, { parse_mode: 'HTML' }).catch(() => { });
-        } else {
-            bot.answerCallbackQuery(query.id, { text: '⚠️ Kamu sudah terdaftar sebelumnya!', show_alert: true });
-        }
+        bot.answerCallbackQuery(query.id, { text: '✅ Berhasil terdaftar!' });
+        bot.sendMessage(groupId, `🎉 <b>${query.from.first_name}</b> berhasil terdaftar sebagai ${getRoleName(groupConfig.role)}!`, { parse_mode: 'HTML' }).catch(() => { });
+    } else {
+        bot.answerCallbackQuery(query.id, { text: '⚠️ Kamu sudah terdaftar sebelumnya!', show_alert: true });
     }
+}
 
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    // Handle "add" or /daftar in groups - AUTO ADD without role selection!
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    bot.on('message', async (msg) => {
-        if (msg.chat.type === 'private') return;
-        if (!msg.text) return;
+// ═══════════════════════════════════════════════════════════════════════════════════
+// Handle "add" or /daftar in groups - AUTO ADD without role selection!
+// ═══════════════════════════════════════════════════════════════════════════════════
+bot.on('message', async (msg) => {
+    if (msg.chat.type === 'private') return;
+    if (!msg.text) return;
 
-        const text = msg.text.toLowerCase().trim();
-        const chatId = msg.chat.id;
-        const userId = msg.from.id;
+    const text = msg.text.toLowerCase().trim();
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
 
-        if (!text.includes('add') && !text.startsWith('/daftar')) return;
+    if (!text.includes('add') && !text.startsWith('/daftar')) return;
 
-        const config = loadJsonData(AUTOADD_FILE) || { configs: {} };
-        const groupConfig = config.configs[chatId];
+    const config = loadJsonData(AUTOADD_FILE) || { configs: {} };
+    const groupConfig = config.configs[chatId];
 
-        if (!groupConfig || !groupConfig.enabled) return;
+    if (!groupConfig || !groupConfig.enabled) return;
 
-        const lastRequest = userCooldown.get(userId);
-        if (lastRequest && Date.now() - lastRequest < COOLDOWN_MS) {
-            const remaining = Math.ceil((COOLDOWN_MS - (Date.now() - lastRequest)) / 1000);
-            return bot.sendMessage(chatId, `⏳ Tunggu ${remaining} detik sebelum mencoba lagi.`, { reply_to_message_id: msg.message_id });
-        }
-        userCooldown.set(userId, Date.now());
+    const lastRequest = userCooldown.get(userId);
+    if (lastRequest && Date.now() - lastRequest < COOLDOWN_MS) {
+        const remaining = Math.ceil((COOLDOWN_MS - (Date.now() - lastRequest)) / 1000);
+        return bot.sendMessage(chatId, `⏳ Tunggu ${remaining} detik sebelum mencoba lagi.`, { reply_to_message_id: msg.message_id });
+    }
+    userCooldown.set(userId, Date.now());
 
-        const isInChannel = await isUserInChannel(userId, groupConfig.channelId);
+    const isInChannel = await isUserInChannel(userId, groupConfig.channelId);
 
-        if (isInChannel) {
-            const added = addUserToRole(userId, groupConfig.role);
+    if (isInChannel) {
+        const added = addUserToRole(userId, groupConfig.role);
 
-            if (added) {
-                bot.sendMessage(chatId, `✅ <b>BERHASIL!</b>
+        if (added) {
+            bot.sendMessage(chatId, `✅ <b>BERHASIL!</b>
 
 👤 ${msg.from.first_name} berhasil terdaftar sebagai ${getRoleName(groupConfig.role)}!
 
 <i>Selamat datang!</i>`, { parse_mode: 'HTML', reply_to_message_id: msg.message_id });
 
-                console.log(`[AUTOADD] Added user ${userId} as ${groupConfig.role} in group ${chatId}`);
-            } else {
-                bot.sendMessage(chatId, `✅ ${msg.from.first_name}, kamu sudah terdaftar sebelumnya!`, { reply_to_message_id: msg.message_id });
-            }
+            console.log(`[AUTOADD] Added user ${userId} as ${groupConfig.role} in group ${chatId}`);
         } else {
-            const channelLink = await getChannelLink(groupConfig.channelId);
+            bot.sendMessage(chatId, `✅ ${msg.from.first_name}, kamu sudah terdaftar sebelumnya!`, { reply_to_message_id: msg.message_id });
+        }
+    } else {
+        const channelLink = await getChannelLink(groupConfig.channelId);
 
-            const keyboard = [];
-            if (channelLink) {
-                keyboard.push([{ text: '📢 Join Channel', url: channelLink }]);
-            }
-            keyboard.push([{ text: '✅ Sudah Join', callback_data: `aa_verify_${userId}_${chatId}` }]);
+        const keyboard = [];
+        if (channelLink) {
+            keyboard.push([{ text: '📢 Join Channel', url: channelLink }]);
+        }
+        keyboard.push([{ text: '✅ Sudah Join', callback_data: `aa_verify_${userId}_${chatId}` }]);
 
-            bot.sendMessage(chatId, `⚠️ <b>${msg.from.first_name}</b>, kamu belum join channel!
+        bot.sendMessage(chatId, `⚠️ <b>${msg.from.first_name}</b>, kamu belum join channel!
 
 📢 Join channel <b>${groupConfig.channelTitle || 'yang diminta'}</b> dulu, lalu klik tombol "Sudah Join".`, {
-                parse_mode: 'HTML',
-                reply_to_message_id: msg.message_id,
-                reply_markup: { inline_keyboard: keyboard }
-            });
-        }
-    });
+            parse_mode: 'HTML',
+            reply_to_message_id: msg.message_id,
+            reply_markup: { inline_keyboard: keyboard }
+        });
+    }
+});
 
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    // /autoaddinfo - Show current config
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    bot.onText(/^\/autoaddinfo$/i, async (msg) => {
-        const chatId = msg.chat.id;
-        const userId = msg.from.id;
+// ═══════════════════════════════════════════════════════════════════════════════════
+// /autoaddinfo - Show current config
+// ═══════════════════════════════════════════════════════════════════════════════════
+bot.onText(/^\/autoaddinfo$/i, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
 
-        if (!isOwner(userId)) {
-            return bot.sendMessage(chatId, '❌ Khusus Owner!');
-        }
+    if (!isOwner(userId)) {
+        return bot.sendMessage(chatId, '❌ Khusus Owner!');
+    }
 
-        const config = loadJsonData(AUTOADD_FILE) || { configs: {} };
+    const config = loadJsonData(AUTOADD_FILE) || { configs: {} };
+    const configs = config.configs || {};
+
+    if (Object.keys(configs).length === 0) {
+        return bot.sendMessage(chatId, '📭 Belum ada konfigurasi auto-add.\n\nKetik /autoadd untuk setup.', { parse_mode: 'HTML' });
+    }
+
+    let text = '📋 <b>AUTO-ADD CONFIGURATIONS</b>\n\n';
+
+    for (const [groupId, cfg] of Object.entries(configs)) {
+        const status = cfg.enabled ? '🟢 Aktif' : '🔴 Nonaktif';
+        text += `<b>Grup:</b> ${cfg.groupTitle || groupId}\n`;
+        text += `📢 Channel: ${cfg.channelTitle || cfg.channelId}\n`;
+        text += `🎯 Role: ${getRoleName(cfg.role)}\n`;
+        text += `📊 Status: ${status}\n`;
+        text += `─────────────\n`;
+    }
+
+    bot.sendMessage(chatId, text, { parse_mode: 'HTML' });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// /autoaddoff - Disable auto-add for a group
+// ═══════════════════════════════════════════════════════════════════════════════════
+bot.onText(/^\/autoaddoff(?:\s+(.+))?$/i, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+
+    if (!isOwner(userId)) {
+        return bot.sendMessage(chatId, '❌ Khusus Owner!');
+    }
+
+    const config = loadJsonData(AUTOADD_FILE) || { configs: {} };
+    let targetGroupId = match[1] ? match[1].trim() : null;
+
+    if (!targetGroupId && msg.chat.type !== 'private') {
+        targetGroupId = String(chatId);
+    }
+
+    if (!targetGroupId) {
         const configs = config.configs || {};
-
         if (Object.keys(configs).length === 0) {
-            return bot.sendMessage(chatId, '📭 Belum ada konfigurasi auto-add.\n\nKetik /autoadd untuk setup.', { parse_mode: 'HTML' });
+            return bot.sendMessage(chatId, '📭 Tidak ada auto-add yang aktif.');
         }
 
-        let text = '📋 <b>AUTO-ADD CONFIGURATIONS</b>\n\n';
+        const keyboard = Object.entries(configs).map(([gid, cfg]) => [{
+            text: `❌ ${cfg.groupTitle || gid}`,
+            callback_data: `aa_off_${gid}`
+        }]);
 
-        for (const [groupId, cfg] of Object.entries(configs)) {
-            const status = cfg.enabled ? '🟢 Aktif' : '🔴 Nonaktif';
-            text += `<b>Grup:</b> ${cfg.groupTitle || groupId}\n`;
-            text += `📢 Channel: ${cfg.channelTitle || cfg.channelId}\n`;
-            text += `🎯 Role: ${getRoleName(cfg.role)}\n`;
-            text += `📊 Status: ${status}\n`;
-            text += `─────────────\n`;
-        }
+        return bot.sendMessage(chatId, '🔧 <b>Pilih grup untuk menonaktifkan auto-add:</b>', {
+            parse_mode: 'HTML',
+            reply_markup: { inline_keyboard: keyboard }
+        });
+    }
 
-        bot.sendMessage(chatId, text, { parse_mode: 'HTML' });
-    });
+    if (config.configs[targetGroupId]) {
+        config.configs[targetGroupId].enabled = false;
+        saveJsonData(AUTOADD_FILE, config);
+        bot.sendMessage(chatId, `✅ Auto-add untuk grup ${config.configs[targetGroupId].groupTitle || targetGroupId} dinonaktifkan.`);
+    } else {
+        bot.sendMessage(chatId, '❌ Konfigurasi tidak ditemukan untuk grup tersebut.');
+    }
+});
 
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    // /autoaddoff - Disable auto-add for a group
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    bot.onText(/^\/autoaddoff(?:\s+(.+))?$/i, async (msg, match) => {
-        const chatId = msg.chat.id;
-        const userId = msg.from.id;
+// ═══════════════════════════════════════════════════════════════════════════════════
+// /cleanmem - Clean all auto-added members from database
+// ═══════════════════════════════════════════════════════════════════════════════════
+bot.onText(/^\/cleanmem$/i, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
 
-        if (!isOwner(userId)) {
-            return bot.sendMessage(chatId, '❌ Khusus Owner!');
-        }
+    if (!isOwner(userId)) {
+        return bot.sendMessage(chatId, '❌ Khusus Owner!');
+    }
 
-        const config = loadJsonData(AUTOADD_FILE) || { configs: {} };
-        let targetGroupId = match[1] ? match[1].trim() : null;
+    const membersData = loadJsonData(AUTOADD_MEMBERS_FILE) || { members: [] };
+    const count = membersData.members.length;
 
-        if (!targetGroupId && msg.chat.type !== 'private') {
-            targetGroupId = String(chatId);
-        }
+    if (count === 0) {
+        return bot.sendMessage(chatId, '📭 Tidak ada member yang di-auto-add.');
+    }
 
-        if (!targetGroupId) {
-            const configs = config.configs || {};
-            if (Object.keys(configs).length === 0) {
-                return bot.sendMessage(chatId, '📭 Tidak ada auto-add yang aktif.');
-            }
-
-            const keyboard = Object.entries(configs).map(([gid, cfg]) => [{
-                text: `❌ ${cfg.groupTitle || gid}`,
-                callback_data: `aa_off_${gid}`
-            }]);
-
-            return bot.sendMessage(chatId, '🔧 <b>Pilih grup untuk menonaktifkan auto-add:</b>', {
-                parse_mode: 'HTML',
-                reply_markup: { inline_keyboard: keyboard }
-            });
-        }
-
-        if (config.configs[targetGroupId]) {
-            config.configs[targetGroupId].enabled = false;
-            saveJsonData(AUTOADD_FILE, config);
-            bot.sendMessage(chatId, `✅ Auto-add untuk grup ${config.configs[targetGroupId].groupTitle || targetGroupId} dinonaktifkan.`);
-        } else {
-            bot.sendMessage(chatId, '❌ Konfigurasi tidak ditemukan untuk grup tersebut.');
-        }
-    });
-
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    // /cleanmem - Clean all auto-added members from database
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    bot.onText(/^\/cleanmem$/i, async (msg) => {
-        const chatId = msg.chat.id;
-        const userId = msg.from.id;
-
-        if (!isOwner(userId)) {
-            return bot.sendMessage(chatId, '❌ Khusus Owner!');
-        }
-
-        const membersData = loadJsonData(AUTOADD_MEMBERS_FILE) || { members: [] };
-        const count = membersData.members.length;
-
-        if (count === 0) {
-            return bot.sendMessage(chatId, '📭 Tidak ada member yang di-auto-add.');
-        }
-
-        bot.sendMessage(chatId, `⚠️ <b>KONFIRMASI CLEAN MEMBER</b>
+    bot.sendMessage(chatId, `⚠️ <b>KONFIRMASI CLEAN MEMBER</b>
 
 📊 Total member yang akan dihapus: <b>${count}</b>
 
@@ -775,97 +817,97 @@ Error: ${e.message}
 • Owner list</blockquote>
 
 Ketik <code>/cleanmem confirm</code> untuk melanjutkan.`, { parse_mode: 'HTML' });
-    });
+});
 
-    bot.onText(/^\/cleanmem confirm$/i, async (msg) => {
-        const chatId = msg.chat.id;
-        const userId = msg.from.id;
+bot.onText(/^\/cleanmem confirm$/i, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
 
-        if (!isOwner(userId)) {
-            return bot.sendMessage(chatId, '❌ Khusus Owner!');
+    if (!isOwner(userId)) {
+        return bot.sendMessage(chatId, '❌ Khusus Owner!');
+    }
+
+    const wait = await bot.sendMessage(chatId, '⏳ Menghapus member...');
+
+    try {
+        const membersData = loadJsonData(AUTOADD_MEMBERS_FILE) || { members: [] };
+        let removedCount = 0;
+
+        let premium = loadJsonData(PREMIUM_FILE) || [];
+        let resellers = loadJsonData(RESELLER_FILE) || [];
+        let owners = loadJsonData(OWNER_FILE) || [];
+
+        for (const member of membersData.members) {
+            const uid = String(member.oderId);
+
+            if (premium.includes(uid)) {
+                premium = premium.filter(id => id !== uid);
+                removedCount++;
+            }
+            if (resellers.includes(uid)) {
+                resellers = resellers.filter(id => id !== uid);
+                removedCount++;
+            }
+            if (owners.includes(uid) && uid !== String(settings.ownerId)) {
+                owners = owners.filter(id => id !== uid);
+                removedCount++;
+            }
         }
 
-        const wait = await bot.sendMessage(chatId, '⏳ Menghapus member...');
+        saveJsonData(PREMIUM_FILE, premium);
+        saveJsonData(RESELLER_FILE, resellers);
+        saveJsonData(OWNER_FILE, owners);
+        saveJsonData(AUTOADD_MEMBERS_FILE, { members: [] });
 
-        try {
-            const membersData = loadJsonData(AUTOADD_MEMBERS_FILE) || { members: [] };
-            let removedCount = 0;
-
-            let premium = loadJsonData(PREMIUM_FILE) || [];
-            let resellers = loadJsonData(RESELLER_FILE) || [];
-            let owners = loadJsonData(OWNER_FILE) || [];
-
-            for (const member of membersData.members) {
-                const uid = String(member.oderId);
-
-                if (premium.includes(uid)) {
-                    premium = premium.filter(id => id !== uid);
-                    removedCount++;
-                }
-                if (resellers.includes(uid)) {
-                    resellers = resellers.filter(id => id !== uid);
-                    removedCount++;
-                }
-                if (owners.includes(uid) && uid !== String(settings.ownerId)) {
-                    owners = owners.filter(id => id !== uid);
-                    removedCount++;
-                }
-            }
-
-            saveJsonData(PREMIUM_FILE, premium);
-            saveJsonData(RESELLER_FILE, resellers);
-            saveJsonData(OWNER_FILE, owners);
-            saveJsonData(AUTOADD_MEMBERS_FILE, { members: [] });
-
-            bot.editMessageText(`✅ <b>CLEAN COMPLETE!</b>
+        bot.editMessageText(`✅ <b>CLEAN COMPLETE!</b>
 
 📊 Total dihapus: <b>${removedCount}</b> entries
 🗑️ Member list: Cleared
 
 <i>Database auto-add sudah bersih.</i>`, {
-                chat_id: chatId,
-                message_id: wait.message_id,
-                parse_mode: 'HTML'
-            });
+            chat_id: chatId,
+            message_id: wait.message_id,
+            parse_mode: 'HTML'
+        });
 
-        } catch (e) {
-            bot.editMessageText(`❌ Error: ${e.message}`, { chat_id: chatId, message_id: wait.message_id });
-        }
-    });
+    } catch (e) {
+        bot.editMessageText(`❌ Error: ${e.message}`, { chat_id: chatId, message_id: wait.message_id });
+    }
+});
 
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    // /listgroups - Show all tracked groups
-    // ═══════════════════════════════════════════════════════════════════════════════════
-    bot.onText(/^\/listgroups$/i, async (msg) => {
-        const chatId = msg.chat.id;
-        const userId = msg.from.id;
+// ═══════════════════════════════════════════════════════════════════════════════════
+// /listgroups - Show all tracked groups
+// ═══════════════════════════════════════════════════════════════════════════════════
+bot.onText(/^\/listgroups$/i, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
 
-        if (!isOwner(userId)) {
-            return bot.sendMessage(chatId, '❌ Khusus Owner!');
-        }
+    if (!isOwner(userId)) {
+        return bot.sendMessage(chatId, '❌ Khusus Owner!');
+    }
 
-        const groups = getTrackedGroups();
-        const groupList = Object.values(groups);
+    const groups = getTrackedGroups();
+    const groupList = Object.values(groups);
 
-        if (groupList.length === 0) {
-            return bot.sendMessage(chatId, `📭 <b>Tidak ada grup yang terdeteksi!</b>
+    if (groupList.length === 0) {
+        return bot.sendMessage(chatId, `📭 <b>Tidak ada grup yang terdeteksi!</b>
 
 📌 Bot akan otomatis mendeteksi grup saat:
 • Bot ditambahkan ke grup
 • Ada pesan di grup
 
 💡 Ketik <code>/idgb</code> di grup untuk menambahkan ke list.`, { parse_mode: 'HTML' });
-        }
+    }
 
-        let text = `📋 <b>DAFTAR GRUP BOT</b>\n\n`;
-        text += `📊 Total: ${groupList.length} grup\n\n`;
+    let text = `📋 <b>DAFTAR GRUP BOT</b>\n\n`;
+    text += `📊 Total: ${groupList.length} grup\n\n`;
 
-        groupList.forEach((g, i) => {
-            text += `${i + 1}. <b>${g.title}</b>\n`;
-            text += `   🆔 <code>${g.id}</code>\n`;
-        });
-
-        bot.sendMessage(chatId, text, { parse_mode: 'HTML' });
+    groupList.forEach((g, i) => {
+        text += `${i + 1}. <b>${g.title}</b>\n`;
+        text += `   🆔 <code>${g.id}</code>\n`;
     });
+
+    bot.sendMessage(chatId, text, { parse_mode: 'HTML' });
+});
 
 };
