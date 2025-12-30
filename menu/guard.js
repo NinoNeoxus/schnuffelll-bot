@@ -237,8 +237,9 @@ module.exports = (bot) => {
         }
 
         const isUserAdmin = await isAdmin(bot, chatId, userId);
-        if (!isUserAdmin && userId.toString() !== OWNER_ID.toString()) {
-            return bot.sendMessage(chatId, '❌ Hanya admin grup yang bisa mengakses panel guard!');
+        const hasRedeem = bot.checkRedeemAccess && bot.checkRedeemAccess(userId);
+        if (!isUserAdmin && userId.toString() !== OWNER_ID.toString() && !hasRedeem) {
+            return bot.sendMessage(chatId, "❌ Hanya admin grup atau user redeem yang bisa mengakses panel guard!");
         }
 
         const s = getGroupSettings(chatId);

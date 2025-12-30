@@ -36,7 +36,8 @@ module.exports = (bot) => {
     function hasAccess(userId) {
         const owners = loadJsonData(OWNER_FILE);
         const premium = loadJsonData(PREMIUM_FILE);
-        return owners.includes(String(userId)) || premium.includes(String(userId));
+        const hasRedeem = bot.checkRedeemAccess && bot.checkRedeemAccess(userId);
+        return owners.includes(String(userId)) || premium.includes(String(userId)) || hasRedeem;
     }
 
     // Helper: Get panel config

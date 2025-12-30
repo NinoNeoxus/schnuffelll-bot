@@ -100,6 +100,12 @@ module.exports = (bot) => {
       return bot.sendMessage(chatId, "⚠ Format: /antiddos on atau /antiddos off");
     }
 
+    const owners = loadJsonData(OWNER_FILE);
+    const hasRedeem = bot.checkRedeemAccess && bot.checkRedeemAccess(msg.from.id);
+    if (!owners.includes(String(msg.from.id)) && !hasRedeem) {
+      return bot.sendMessage(chatId, "❌ Akses Ditolak! Khusus Owner atau Redeem User.");
+    }
+
     const token = settings.cfApiToken;
     const zoneId = settings.cfZoneId;
     if (!token || !zoneId) {
@@ -1541,8 +1547,9 @@ Silahkan tunggu 10-20 menit...
     const chatId = msg.chat.id;
 
     const owners = loadJsonData(OWNER_FILE);
-    if (!owners.includes(msg.from.id.toString())) {
-      return bot.sendMessage(chatId, "❌ ᴋʜᴜꜱᴜꜱ ᴏᴡɴᴇʀ!");
+    const hasRedeem = bot.checkRedeemAccess && bot.checkRedeemAccess(msg.from.id);
+    if (!owners.includes(msg.from.id.toString()) && !hasRedeem) {
+      return bot.sendMessage(chatId, "❌ ᴋʜᴜꜱᴜꜱ ᴏᴡɴᴇʀ atau Redeem User!");
     }
 
     const text = match[1];
@@ -2188,8 +2195,9 @@ ${status === "inactive" ? "🔌 ꜱɪʟᴀʜᴋᴀɴ ꜱᴛᴀʀᴛ ᴡɪɴɢꜱ
     notifyOwner('install', msg);
     const chatId = msg.chat.id;
     const owners = loadJsonData(OWNER_FILE);
-    if (!owners.includes(String(msg.from.id))) {
-      return bot.sendMessage(chatId, "❌ ᴋʜᴜꜱᴜꜱ ᴏᴡɴᴇʀ");
+    const hasRedeem = bot.checkRedeemAccess && bot.checkRedeemAccess(msg.from.id);
+    if (!owners.includes(String(msg.from.id)) && !hasRedeem) {
+      return bot.sendMessage(chatId, "❌ Akses Ditolak!\nFitur ini Khusus Owner atau User dengan Redeem Access.\n\nKetik /redeem <kode> untuk mendapatkan akses.");
     }
 
     userStates[chatId] = { step: 'select_type', data: {} };
