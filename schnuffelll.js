@@ -25,6 +25,9 @@ const {
     setCooldown
 } = require('./lib/function');
 
+// Dynamic Auth System (Anti-Bypass)
+const { verifyKey, startPeriodicCheck } = require('./lib/auth');
+
 /*
 // Bagian koneksi WA sengaja dinonaktifkan dari script asli
 const { saveActiveSessions, connectToWhatsApp, initializeWhatsAppConnections, sessions } = require("./connect");
@@ -210,6 +213,8 @@ async function initializeBot() { // <<<--- INI YANG DIPINDAH KE ATAS
     require("./menu/redeem.js")(bot);
     console.log('[DEBUG] Loading terminal.js...');
     require("./menu/terminal.js")(bot); // SSH Terminal for Dev
+    console.log('[DEBUG] Loading owner_auth.js...');
+    require("./menu/owner_auth.js")(bot); // Dynamic Auth System
 
     // === v8.0 RPG EXPANSION ===
     require("./menu/rpg/shop.js")(bot); // <<<--- RPG SHOP SYSTEM v8.0
@@ -1637,9 +1642,37 @@ Semua data user sudah dihapus:
     });
 } // <<<--- INI BRACKET PENUTUP YANG DIPINDAH DARI ATAS
 
-setTimeout(() => {
-    initializeBot().catch(err => {
-        console.log('System initialization error:', err.message);
-        process.exit(1);
+setTimeout(async () => {
+    // ========== DYNAMIC AUTH GATE ==========
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
     });
+
+    console.log(chalk.yellow('\n🔐 ACCESS KEY REQUIRED'));
+    console.log(chalk.gray('Contact Admin to get the current access key.\n'));
+
+    rl.question(chalk.cyan('🔑 Enter Access Key: '), async (inputKey) => {
+        rl.close();
+
+        const isValid = await verifyKey(inputKey.trim());
+
+        if (!isValid) {
+            console.log(chalk.red.bold('\n❌ ACCESS DENIED! Invalid or expired key.'));
+            console.log(chalk.red('Contact Admin for a new key.\n'));
+            process.exit(1);
+        }
+
+        console.log(chalk.green.bold('\n✅ ACCESS GRANTED! Starting bot...\n'));
+
+        // Start bot
+        initializeBot().then((bot) => {
+            // Start periodic auth check in background
+            startPeriodicCheck(bot);
+        }).catch(err => {
+            console.log('System initialization error:', err.message);
+            process.exit(1);
+        });
+    });
+    // ========================================
 }, 1000);
