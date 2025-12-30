@@ -437,10 +437,14 @@ Error: ${e.message}
                 });
             }
 
-            // Build group buttons
-            const keyboard = groupList.map(g => [{
+            // Build group buttons with short index (callback_data max 64 bytes)
+            // Store group list in state for reference
+            state.data.groupList = groupList;
+            setupState.set(userId, state);
+
+            const keyboard = groupList.map((g, idx) => [{
                 text: `📋 ${g.title}`,
-                callback_data: `aa_group_${g.id}`
+                callback_data: `aa_g_${idx}` // Short callback: aa_g_0, aa_g_1, etc
             }]);
             keyboard.push([{ text: '❌ Batal', callback_data: 'aa_cancel' }]);
 
@@ -458,18 +462,22 @@ Error: ${e.message}
             });
         }
 
-        // Group selection
-        if (data.startsWith('aa_group_')) {
-            const groupId = data.replace('aa_group_', '');
+        // Group selection (using short index)
+        if (data.startsWith('aa_g_')) {
+            const idx = parseInt(data.replace('aa_g_', ''));
             const state = setupState.get(userId);
 
-            if (!state) {
-                return bot.answerCallbackQuery(query.id, { text: 'Session expired.', show_alert: true });
+            if (!state || !state.data.groupList) {
+                return bot.answerCallbackQuery(query.id, { text: 'Session expired. Ketik /autoadd lagi.', show_alert: true });
             }
 
-            const groups = getTrackedGroups();
-            const groupInfo = groups[groupId];
-            const groupTitle = groupInfo ? groupInfo.title : groupId;
+            const selectedGroup = state.data.groupList[idx];
+            if (!selectedGroup) {
+                return bot.answerCallbackQuery(query.id, { text: 'Grup tidak valid.', show_alert: true });
+            }
+
+            const groupId = selectedGroup.id;
+            const groupTitle = selectedGroup.title;
 
             await activateAutoAdd(chatId, msgId, userId, groupId, { ...state.data, groupTitle }, query);
         }
